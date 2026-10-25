@@ -1,0 +1,1780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SnapGive prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213D; --ink-2:#2B3A5E; --muted:#6A7490; --line:#E3E7F0;
+  --snap:#FFD23F; --snap-d:#E8B800; --snap-l:#FFF4C7;
+  --ok:#14B885; --ok-l:#D9F7EC;
+  --warn:#B45309; --warn-l:#FEF3C7; --warn-line:#F5C45E;
+  --danger:#D93D4E; --red-l:#FDECEE; --red-line:#F3B4BB; --grey:#9AA3B8;
+  --land:#E9EEF2; --block:#DEE5EB; --road:#FFFFFF; --roadc:#CBD5DF; --park:#CDE9D3; --water:#BFDDF2;
+  --page:#F2F4F8;
+  --display:'Bricolage Grotesque','Avenir Next',system-ui,sans-serif;
+  --body:'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:var(--body);background:var(--page);color:var(--ink);font-size:15px;line-height:1.4}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- page shell ---------- */
+.stage{display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+.side{background:#fff;border-right:1px solid var(--line);padding:26px 22px 30px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em}
+.brand i{width:30px;height:30px;border-radius:9px;background:var(--snap);display:grid;place-items:center;color:var(--ink)}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 18px}
+.now{background:var(--ink);color:#fff;border-radius:16px;padding:14px 16px;margin-bottom:20px}
+.now b{font-family:var(--display);font-size:17px;display:block;margin-bottom:4px}
+.now p{margin:0;font-size:13px;line-height:1.45;color:#C9D1E6}
+.grp{margin:16px 0 8px;font-weight:700;font-size:13px;color:var(--ink-2)}
+.views{display:grid;gap:6px}
+.vbtn{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);font-size:13.5px;font-weight:500;background:#fff}
+.vbtn span{flex:none;width:26px;height:26px;border-radius:8px;background:var(--page);display:grid;place-items:center;font-weight:700;font-size:12.5px}
+.vbtn:hover{border-color:var(--ink-2)}
+.vbtn.on{background:var(--snap-l);border-color:var(--snap-d)}
+.vbtn.on span{background:var(--snap)}
+.tools{display:grid;gap:8px;margin-top:6px}
+.tbtn{padding:9px 12px;border-radius:10px;background:var(--page);font-weight:600;font-size:13.5px;text-align:left}
+.tbtn:hover{background:#E5E9F2}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 2px 0}
+.phone-area{display:flex;align-items:center;justify-content:center;padding:16px;min-height:100vh}
+.phone-fit{position:relative}
+.phone{position:absolute;left:0;top:0;width:414px;height:868px;transform-origin:0 0;border-radius:60px;background:#0A0E1A;padding:12px;box-shadow:0 0 0 2px #2A3350 inset,0 30px 70px rgba(20,33,61,.35)}
+.screen{position:relative;width:390px;height:844px;border-radius:48px;overflow:hidden;background:var(--land);isolation:isolate;user-select:none;-webkit-user-select:none}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:32px;background:#000;border-radius:20px;z-index:200}
+.status{position:absolute;top:0;left:0;right:0;height:52px;padding:17px 32px 0;display:flex;justify-content:space-between;font-weight:700;font-size:15px;z-index:150;pointer-events:none;color:var(--ink)}
+.status.light{color:#fff}
+.status svg{display:block}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--ink);z-index:200;pointer-events:none;opacity:.85}
+.homebar.light{background:#fff}
+
+/* ---------- map ---------- */
+#mapvp{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none;z-index:1}
+#mapvp.drag{cursor:grabbing}
+#world{position:absolute;left:0;top:0;width:1600px;height:1600px;will-change:transform}
+#world.anim{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+#world svg.base,#world svg.over{position:absolute;left:0;top:0;pointer-events:none}
+.pin{position:absolute;transform:translate(-50%,-100%);width:44px;height:54px;padding:0;filter:drop-shadow(0 4px 5px rgba(20,33,61,.3));transition:transform .2s}
+.pin:hover{transform:translate(-50%,-104%) scale(1.06)}
+.pin.sel{transform:translate(-50%,-104%) scale(1.22);z-index:5}
+.pin.pulse::after{content:"";position:absolute;left:50%;bottom:-6px;width:22px;height:22px;margin-left:-11px;border-radius:50%;border:3px solid var(--snap-d);animation:ping 1.4s ease-out 3}
+@keyframes ping{from{transform:scale(.4);opacity:1}to{transform:scale(3.2);opacity:0}}
+.pin .tag{position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;font-size:10.5px;font-weight:700;padding:1px 6px;white-space:nowrap}
+.pin .qb{position:absolute;right:-6px;top:-2px;background:var(--snap);color:var(--ink);border-radius:9px;font-size:10.5px;font-weight:800;padding:1px 6px;border:2px solid #fff}
+#me{position:absolute;width:0;height:0;z-index:4;transition:none}
+#me .dot{position:absolute;left:-11px;top:-11px;width:22px;height:22px;border-radius:50%;background:#2F6BFF;border:4px solid #fff;box-shadow:0 2px 8px rgba(47,107,255,.55)}
+#me .cone{position:absolute;left:-34px;top:-34px;width:68px;height:68px}
+
+.round{width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(20,33,61,.18);color:var(--ink);position:relative}
+.round:active{transform:scale(.95)}
+.round .badge{position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--snap-d);border:2px solid #fff}
+#top{position:absolute;top:56px;left:16px;right:16px;z-index:20}
+#top .row{display:flex;justify-content:space-between;align-items:center}
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-right:56px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--ink);color:#fff;border-radius:20px;padding:5px 6px 5px 11px;font-size:12.5px;font-weight:600;box-shadow:0 3px 10px rgba(20,33,61,.25)}
+.chip svg{opacity:.8}
+#legend{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:19;background:rgba(255,255,255,.96);border-radius:14px;padding:7px 10px;box-shadow:0 4px 14px rgba(20,33,61,.18);display:grid;grid-template-columns:auto auto;gap:4px 10px;font-size:11px;font-weight:600;color:var(--ink);max-width:238px}
+#legend h6{grid-column:1/-1;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#6B7690;margin:0 0 1px}
+#legend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#recenter{position:absolute;right:16px;z-index:20;transition:bottom .3s}
+/* bottom map row: Game (left) | Pin guide card (middle) | My location (right) */
+#gameBtn{position:absolute;left:16px;bottom:40px;z-index:20}
+#gameBtn .badge{background:var(--ok)}
+/* tokens + active power-ups */
+.tokpill{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 9px;border-radius:20px;background:#fff;box-shadow:0 4px 14px rgba(20,33,61,.18);font-family:var(--display);font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+.tokpill.bump{animation:bump .5s}
+@keyframes bump{40%{transform:scale(1.15)}}
+.coin{display:inline-block;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE58A,#F2B705 60%,#D99A00);box-shadow:inset 0 0 0 2px #C98F00;position:relative;flex:none}
+.coin::after{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid rgba(122,82,0,.45)}
+.coin.big{width:46px;height:46px}.coin.big::after{inset:12px;border-width:3px}
+#pups{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#pups:empty{display:none}
+.pup{display:inline-flex;align-items:center;gap:5px;background:var(--snap-l);border:1.5px solid var(--snap-d);color:var(--ink);border-radius:16px;padding:3px 9px;font-size:12px;font-weight:700;box-shadow:0 3px 10px rgba(20,33,61,.12)}
+.pup b{font-variant-numeric:tabular-nums}
+.chip.farchip{background:#fff;color:var(--ink);border:1.5px solid var(--ink);padding:5px 11px}
+.pin .ft{position:absolute;left:50%;top:-10px;transform:translateX(-50%);background:#7C3AED;color:#fff;border:2px solid #fff;border-radius:8px;font-size:10px;font-weight:800;padding:0 6px;white-space:nowrap}
+.pin .eb{position:absolute;left:50%;top:-9px;transform:translateX(-50%);background:var(--snap);color:var(--ink);border:2px solid #fff;border-radius:8px;font-size:10px;font-weight:800;padding:0 6px;white-space:nowrap}
+.ebanner{display:flex;gap:8px;align-items:center;margin-top:12px;padding:9px 12px;border-radius:12px;background:var(--snap-l);border:1.5px solid var(--snap-d);font-size:13px;font-weight:600}
+.ebanner b{font-variant-numeric:tabular-nums}
+/* A/B version B: address locked until claimed */
+.lockrow{display:flex;gap:8px;align-items:center;width:100%;margin-top:12px;padding:9px 12px;border-radius:12px;background:#F1F5F9;border:1.5px dashed #94A3B8;color:#334155;font-weight:600;font-size:13px;text-align:left}
+.lockrow span{flex:1}
+.mic.lockic{background:#E2E8F0;color:#334155}
+.unl{display:inline-flex;align-items:center;gap:3px;background:var(--ok-l);color:#0B7A57;border-radius:8px;padding:0 6px;font-size:11px;font-weight:800;margin-left:6px;vertical-align:1px}
+.flashrow{animation:hl 2.2s ease-out 1;border-radius:6px}
+@keyframes hl{0%,35%{background:var(--snap-l);box-shadow:0 0 0 4px var(--snap-l)}100%{background:transparent;box-shadow:0 0 0 4px transparent}}
+/* further-away list (Proximity Boost) */
+.flist{display:grid;gap:8px;margin-top:12px;max-height:330px;overflow:auto}
+.frow{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:8px;border:1.5px solid var(--line);border-radius:14px}
+.frow .fth{width:54px;height:54px;border-radius:12px;overflow:hidden;flex:none}
+.frow div:nth-child(2){flex:1;display:grid}
+.frow small{color:var(--muted);font-size:12.5px;font-weight:600}
+.frow.out{opacity:.5}
+
+/* ---------- sheet ---------- */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:30;background:#fff;border-radius:30px 30px 0 0;box-shadow:0 -12px 40px rgba(20,33,61,.22);padding:8px 20px 34px;transform:translateY(108%);transition:transform .4s cubic-bezier(.2,.9,.25,1)}
+.sheet.open{transform:none}
+.sheet.tall{padding-bottom:30px}
+.grab{display:block;width:100%;height:22px;position:relative;touch-action:none;cursor:grab}
+.grab::before{content:"";position:absolute;left:50%;top:8px;width:46px;height:5px;border-radius:3px;background:#CBD2E1;transform:translateX(-50%)}
+.xbtn{position:absolute;right:14px;top:12px;width:34px;height:34px;border-radius:50%;background:var(--page);display:grid;place-items:center;z-index:2}
+.photos{display:flex;gap:10px;margin:6px 0 12px}
+.photos>*{flex:1;height:128px;border-radius:16px;overflow:hidden;position:relative;background:var(--page)}
+.photos .play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,33,61,.45);color:#fff}
+.ttl{font-family:var(--display);font-weight:800;font-size:25px;letter-spacing:-.02em;line-height:1.1;margin:0}
+.meta{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:10px}
+.cat{display:inline-flex;align-items:center;gap:6px;background:var(--page);border-radius:20px;padding:4px 11px 4px 8px;font-weight:600;font-size:13px}
+.addr{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13.5px;margin-top:8px}
+.tleft{text-align:right}
+.tleft small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.timer{display:inline-block;font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.01em;font-variant-numeric:tabular-nums;border:2px solid var(--ink);border-radius:20px;padding:2px 12px}
+.timer.low{border-color:var(--danger);color:var(--danger)}
+.cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;border-radius:28px;background:var(--snap);color:var(--ink);font-family:var(--display);font-weight:800;font-size:19px;margin-top:16px;box-shadow:0 5px 0 var(--snap-d);transition:transform .12s,box-shadow .12s}
+.cta:active{transform:translateY(4px);box-shadow:0 1px 0 var(--snap-d)}
+.cta.ghost{background:#fff;border:2px solid var(--ink);box-shadow:none;font-size:16px;height:50px}
+.cta.dis{background:var(--page);color:var(--muted);box-shadow:none}
+.warnbtn{width:56px;height:56px;border-radius:16px;border:2px solid var(--warn-line);background:var(--warn-l);color:var(--warn);display:grid;place-items:center;flex:none}
+.rsv{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px}
+.rsv p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.rsv b{display:block;font-size:15px;color:var(--ink)}
+.more{color:var(--ink);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- full details ---------- */
+.detail{position:absolute;inset:0;z-index:40;background:#fff;transform:translateY(102%);transition:transform .42s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+.dscroll{position:absolute;inset:0;overflow:auto;padding:62px 20px 130px}
+.fscroll{position:absolute;inset:0;overflow:auto;padding:58px 20px 150px}
+.detail.open{transform:none}
+.detail>.xbtn{position:absolute;z-index:3;top:60px;right:16px}
+.dsec{margin-top:18px}
+.dsec h4{margin:0 0 6px;font-family:var(--display);font-size:15px}
+.box{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
+.pickup{display:inline-block;background:var(--snap-l);border:1.5px solid var(--snap-d);border-radius:12px;padding:8px 12px;font-weight:600}
+.warnbox{margin-top:12px;background:var(--red-l);border:1.5px solid var(--red-line);border-radius:12px;padding:10px 12px;color:#5B1520;font-size:13.5px}
+.warnbox>b{display:flex;gap:6px;align-items:center;margin-bottom:4px;color:var(--danger)}
+.wnote{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;color:#8A3A45;margin-bottom:8px}
+.wnote svg{flex:none;margin-top:1px}
+.clist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.clist li{background:#fff;border:1px solid var(--red-line);border-radius:10px;padding:8px 10px}
+.clist .rs{font-weight:600;color:var(--ink);word-break:break-word}
+.clist .rs.cu{font-style:italic}
+.clist .rm2{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:12px;color:var(--muted);font-weight:600}
+.you{background:var(--snap);color:var(--ink);border-radius:8px;padding:0 6px;font-size:11px;font-weight:800}
+.cstrip{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--red-l);border:1.5px solid var(--red-line);text-align:left;color:#5B1520}
+.cstrip .ci{width:34px;height:34px;border-radius:10px;background:var(--danger);color:#fff;display:grid;place-items:center;flex:none}
+.cstrip .ct{flex:1;display:grid;line-height:1.25}
+.cstrip .ct b{font-size:14px}
+.cstrip .ct small{font-size:12.5px;color:#8A3A45;font-weight:500}
+.cstrip>svg{flex:none;color:#8A3A45}
+.cstrip.amber{background:var(--warn-l);border-color:var(--warn-line);color:#6B3A07}
+.cstrip.amber .ci{background:var(--warn)}
+.cstrip.amber .ct small,.cstrip.amber>svg{color:#8A5A12}
+.warnbox.amber{background:var(--warn-l);border-color:var(--warn-line);color:#6B3A07}
+.warnbox.amber>b{color:var(--warn)}
+.warnbox.amber .wnote{color:#8A5A12}
+.warnbox.amber .clist li{border-color:var(--warn-line)}
+.clist.scroll{max-height:250px;overflow:auto;padding-right:2px}
+.pin .cb{position:absolute;right:-6px;top:-2px;background:#fff;color:var(--danger);border:2px solid var(--danger);border-radius:9px;font-size:10.5px;font-weight:800;padding:0 5px;line-height:15px}
+.stick{position:absolute;left:0;right:0;bottom:0;padding:14px 20px 32px;background:linear-gradient(to top,#fff 70%,rgba(255,255,255,0))}
+.stick .cta{margin-top:0}
+.banner{background:var(--page);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;color:var(--ink-2);font-size:13.5px}
+
+/* ---------- nav card ---------- */
+.nav{position:absolute;left:12px;right:12px;bottom:26px;z-index:30;background:#fff;border-radius:26px;box-shadow:0 12px 40px rgba(20,33,61,.28);padding:16px 18px 18px;transform:translateY(130%);transition:transform .45s cubic-bezier(.2,.9,.25,1)}
+.nav.open{transform:none}
+.nav .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.nav .nm{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.1}
+.cancelbtn{border:1.5px solid var(--danger);color:var(--danger);border-radius:12px;padding:6px 10px;font-weight:700;font-size:12.5px;line-height:1.1;text-align:center;flex:none}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:12px 0;font-size:14px}
+.rows dt{color:var(--muted);font-weight:600}
+.rows dd{margin:0;font-weight:600}
+.askrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.askrow b{font-family:var(--display);font-size:16px}
+.slider{position:relative;height:56px;border-radius:28px;background:var(--ink);color:#fff;overflow:hidden;touch-action:none}
+.slider .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--ok)}
+.slider .lbl{position:absolute;inset:0;display:grid;place-items:center;padding-left:46px;font-weight:700;font-size:15px;pointer-events:none;letter-spacing:.01em}
+.slider .knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:var(--snap);color:var(--ink);display:grid;place-items:center;cursor:grab;touch-action:none}
+.slider.off{opacity:.4;pointer-events:none}
+.slider.done .lbl{opacity:0}
+.slider.back .knob,.slider.back .fill{transition:all .25s}
+
+/* ---------- collected ---------- */
+.done{position:absolute;left:12px;right:12px;bottom:26px;z-index:35;background:#fff;border-radius:28px;box-shadow:0 12px 40px rgba(20,33,61,.3);padding:20px 22px 20px;text-align:center;transform:translateY(130%);transition:transform .45s cubic-bezier(.2,.9,.25,1)}
+.done.open{transform:none}
+.done .tick{width:68px;height:68px;margin:0 auto 8px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center}
+.done.open .tick svg path{stroke-dasharray:30;stroke-dashoffset:30;animation:draw .5s .25s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.done h3{font-family:var(--display);font-size:26px;margin:0}
+.done p{margin:4px 0 0;color:var(--muted);font-size:14px}
+
+/* ---------- filter ---------- */
+.scrim{position:absolute;inset:0;background:rgba(20,33,61,.35);z-index:44;opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.open{opacity:1;pointer-events:auto}
+.fpanel{position:absolute;left:12px;right:12px;top:112px;z-index:45;background:#fff;border-radius:24px;padding:16px 16px 14px;box-shadow:0 16px 50px rgba(20,33,61,.3);transform-origin:top left;transform:scale(.9) translateY(-10px);opacity:0;pointer-events:none;transition:all .22s cubic-bezier(.2,.9,.25,1)}
+.fpanel.open{transform:none;opacity:1;pointer-events:auto}
+.fgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
+.fgrid h5{margin:0 0 6px;font-size:12.5px;color:var(--muted);font-weight:700}
+.opt{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 10px;border-radius:10px;font-weight:600;font-size:14px}
+.opt:hover{background:var(--page)}
+.opt.on{background:var(--snap);}
+.opt.on svg{margin-left:auto}
+.fgrid .col2 .opt{margin-bottom:2px}
+.fgrid hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+.ffoot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.ffoot button{font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- camera ---------- */
+.cam{position:absolute;inset:0;z-index:50;background:#10131C;color:#fff;transform:translateY(102%);transition:transform .4s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+.cam.open{transform:none}
+.cam{background:#0B0E16}
+.vfwrap{position:absolute;left:0;right:0;top:104px;height:520px;overflow:hidden;background:#F6F7FA;cursor:crosshair}
+.vfz{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform-origin:50% 56.7%;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.torchfx{position:absolute;inset:0;background:rgba(255,238,196,.28);mix-blend-mode:soft-light;pointer-events:none}
+.fsq{position:absolute;width:78px;height:78px;margin:-39px 0 0 -39px;border:2px solid var(--snap-d);border-radius:8px;opacity:0;pointer-events:none}
+.fsq.go{animation:fsq 1.1s ease-out}
+@keyframes fsq{0%{opacity:1;transform:scale(1.35)}20%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+.cam .hdr{position:absolute;top:56px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:3}
+.glass{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);display:grid;place-items:center;color:#fff}
+.glass.on{background:var(--snap);color:var(--ink)}
+.cam .zoom{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:6px}
+.zoom button{min-width:40px;height:34px;border-radius:17px;font-weight:700;font-size:13px;background:rgba(14,18,30,.62);color:#fff;padding:0 8px}
+.zoom button.on{background:var(--snap);color:var(--ink)}
+.cam .modes{position:absolute;left:0;right:0;top:640px;display:flex;justify-content:center;gap:24px;font-weight:700;font-size:14px;letter-spacing:.02em}
+.modes button{padding:6px 14px;border-radius:18px;color:#B5BED6}
+.modes button.on{background:#fff;color:var(--ink)}
+.cam .ctrl{position:absolute;left:0;right:0;bottom:50px;display:flex;justify-content:space-between;align-items:center;padding:0 28px}
+.shutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;display:grid;place-items:center;transition:transform .1s}
+.shutter:active{transform:scale(.92)}
+.shutter i{width:58px;height:58px;border-radius:50%;background:#fff;transition:all .2s}
+.shutter.vid i{background:var(--danger)}
+.shutter.rec i{border-radius:12px;width:32px;height:32px;background:var(--danger)}
+.gal{width:56px;height:56px;border-radius:14px;border:2px solid #fff;display:grid;place-items:center;font-size:11px;font-weight:700;gap:0;background:rgba(255,255,255,.1)}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.flash.go{animation:fl .35s}
+@keyframes fl{0%{opacity:.9}100%{opacity:0}}
+.recdot{position:absolute;top:116px;z-index:3;left:0;right:0;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;display:none}
+.recdot.on{display:block}
+.recdot span{display:inline-flex;gap:8px;align-items:center;background:rgba(0,0,0,.5);border-radius:14px;padding:4px 12px}
+.recdot i{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.2}}
+.torch{position:absolute;left:50%;top:536px;transform:translateX(-50%);font-size:12px;font-weight:600;color:#C9D1E6}
+
+/* ---------- form ---------- */
+.form{position:absolute;inset:0;z-index:50;background:#fff;transform:translateX(102%);transition:transform .4s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+.form.open{transform:none}
+.form h2{font-family:var(--display);font-size:28px;letter-spacing:-.02em;margin:12px 0 14px}
+.back{width:42px;height:42px;border-radius:50%;background:var(--page);display:grid;place-items:center}
+.media{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.media>*{flex:none;width:92px}
+.mt{width:92px;height:92px;border-radius:16px;overflow:hidden;position:relative;background:var(--page)}
+.mt .play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,33,61,.5);color:#fff}
+.mt .rm{position:absolute;right:4px;top:4px;width:22px;height:22px;border-radius:50%;background:rgba(20,33,61,.75);color:#fff;display:grid;place-items:center}
+.mcap{font-size:12px;font-weight:600;margin-top:4px;text-align:center;color:var(--ink-2)}
+.addm{width:92px;height:92px;border-radius:16px;border:2px dashed #B6BFD4;display:grid;place-items:center;color:var(--ink-2)}
+.fld{margin-top:14px}
+.fld label{display:block;font-weight:700;font-size:13.5px;margin-bottom:5px}
+.fld label em{font-style:normal;color:var(--muted);font-weight:500}
+.inp{width:100%;height:48px;border:1.5px solid #CBD3E4;border-radius:14px;padding:0 14px;background:#fff;outline:none}
+textarea.inp{height:86px;padding:10px 14px;resize:none}
+.inp:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--snap)}
+.err .inp{border-color:var(--danger)}
+.emsg{display:none;color:var(--danger);font-size:12.5px;font-weight:600;margin-top:4px}
+.err .emsg{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fsec{font-family:var(--display);font-weight:700;font-size:17px;margin:24px 0 0}
+.fbar{position:absolute;left:0;right:0;bottom:0;padding:14px 20px 30px;background:linear-gradient(to top,#fff 78%,rgba(255,255,255,0));display:flex;gap:12px;align-items:center;z-index:2}
+.fbar .cta{margin:0;flex:1}
+.timerbtn{width:58px;display:grid;place-items:center;gap:1px;font-size:11.5px;font-weight:700;flex:none}
+.timerbtn span{width:50px;height:50px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center}
+.timerbtn small{font-size:11px;color:var(--ink-2)}
+.fbar .nb{position:static}
+/* A/B version B: distance and walking time under each pin */
+.pin .wt{display:inline-flex;align-items:center;gap:2px;position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);background:#fff;color:var(--ink);border:1.5px solid var(--ink);border-radius:9px;font-size:11px;font-weight:700;padding:0 6px;line-height:16px;white-space:nowrap;box-shadow:0 2px 5px rgba(20,33,61,.18)}
+.pin.sel .wt{background:var(--ink);color:#fff}
+/* A/B test note in the sidebar */
+.abv .vbtn span{font-size:13px}
+.abnote{font-size:12.5px;color:var(--ink-2);background:var(--page);border-radius:10px;padding:8px 10px;margin:8px 0 0;line-height:1.45}
+
+/* ---------- modal ---------- */
+.modal{position:absolute;inset:0;z-index:60;background:rgba(20,33,61,.5);display:grid;place-items:end center;padding:0 12px 28px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal.open{opacity:1;pointer-events:auto}
+.mcard{width:100%;background:#fff;border-radius:28px;padding:22px 20px 20px;position:relative;transform:translateY(24px);transition:transform .3s cubic-bezier(.2,.9,.25,1)}
+.modal.open .mcard{transform:none}
+.mcard h3{font-family:var(--display);font-size:23px;letter-spacing:-.02em;margin:0 0 6px;padding-right:34px;line-height:1.15}
+.mcard p{margin:0 0 14px;color:var(--ink-2);font-size:14px}
+.mcard .cta{margin-top:10px;height:52px;font-size:17px}
+.mcard .xbtn{top:16px;right:16px}
+.mic{width:46px;height:46px;border-radius:14px;background:var(--warn-l);color:var(--warn);display:grid;place-items:center;margin-bottom:10px}
+.radio{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:1.5px solid #CBD3E4;border-radius:14px;margin-bottom:8px;text-align:left;font-weight:600}
+.radio i{width:20px;height:20px;border-radius:50%;border:2px solid #98A2BC;flex:none;display:grid;place-items:center}
+.radio.on{border-color:var(--ink);background:var(--snap-l)}
+.radio.on i{border-color:var(--ink);background:var(--ink);box-shadow:inset 0 0 0 3px var(--snap-l)}
+.pick{position:relative;display:flex;justify-content:center;gap:10px;margin:8px 0 6px}
+.pick::before{content:"";position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px;border-radius:22px;background:var(--snap-l);border:2px solid var(--snap-d)}
+.pcol{position:relative;display:grid;justify-items:center;width:116px}
+.pcol button.step{width:44px;height:30px;display:grid;place-items:center;color:var(--ink-2);position:relative;z-index:1}
+.pcol .v{height:38px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--display);font-weight:700;position:relative;z-index:1}
+.pcol .v.dim{color:#B4BCD0;font-size:17px;cursor:pointer;height:32px}
+.pcol .v.cur{font-size:23px}
+.pcol .v.cur small{font-size:13px;font-weight:600;font-family:var(--body);color:var(--ink-2)}
+
+/* ---------- games & rewards hub ---------- */
+.hub{position:absolute;inset:0;z-index:46;background:var(--page);transform:translateY(102%);transition:transform .42s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+.hub.open{transform:none}
+.hscroll{position:absolute;inset:0;overflow:auto;padding:58px 18px 40px}
+.hhd{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.hhd h2{font-family:var(--display);font-size:26px;margin:0;letter-spacing:-.02em}
+.balcard{background:var(--ink);color:#fff;border-radius:22px;padding:16px 18px;display:flex;gap:14px;align-items:center}
+.balcard b{font-family:var(--display);font-size:34px;line-height:1}
+.balcard b span{font-size:16px;font-weight:600;margin-left:6px}
+.balcard small{display:block;color:#C9D1E6;font-size:12.5px;margin-top:5px;line-height:1.4}
+.hsec{font-family:var(--display);font-size:17px;margin:22px 2px 8px}
+.pcard{background:#fff;border-radius:18px;padding:14px;box-shadow:0 2px 10px rgba(20,33,61,.06);margin-bottom:10px}
+.pcard .ph{display:flex;gap:12px;align-items:flex-start}
+.pic{width:42px;height:42px;border-radius:12px;background:var(--snap-l);display:grid;place-items:center;flex:none}
+.pcard h4{margin:0;font-size:16px;font-family:var(--display)}
+.pcard p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.pcard .cost{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:13px;white-space:nowrap}
+.pcard .cost .coin{width:16px;height:16px}.pcard .cost .coin::after{inset:4px;border-width:1.5px}
+.pbtn{margin-top:12px;width:100%;height:44px;border-radius:22px;background:var(--snap);font-weight:800;font-family:var(--display);font-size:15.5px;box-shadow:0 3px 0 var(--snap-d);display:flex;align-items:center;justify-content:center;gap:8px}
+.pbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--snap-d)}
+.pbtn.dis{background:#E7EAF1;color:var(--muted);box-shadow:none}
+.pbtn.ghost{background:#fff;border:2px solid var(--ink);box-shadow:none}
+.pbtn.busy{opacity:.7;pointer-events:none}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pact{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--ok-l);border-radius:12px;padding:9px 12px;font-weight:700;font-size:13.5px;color:#0B6B4C}
+.pact b{font-variant-numeric:tabular-nums}
+.pwait{margin-top:12px;background:var(--page);border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.pwait b{font-variant-numeric:tabular-nums}
+.ledger{list-style:none;margin:0;padding:0;background:#fff;border-radius:16px;overflow:hidden}
+.ledger li{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-size:13.5px}
+.ledger li:first-child{border-top:0}
+.ledger small{display:block;color:var(--muted);font-size:11.5px}
+.ledger .p{color:#0B7A57;font-weight:800;white-space:nowrap}.ledger .m{color:var(--danger);font-weight:800;white-space:nowrap}
+.hnote{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
+
+/* ---------- Water Sort ---------- */
+.game{position:absolute;inset:0;z-index:48;background:#101A33;color:#fff;transform:translateY(102%);transition:transform .42s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+.game.open{transform:none}
+.gscroll{position:absolute;inset:0;overflow:auto;padding:58px 18px 36px}
+.ghd{display:flex;gap:8px;align-items:center}
+.ghd h2{font-family:var(--display);font-size:24px;margin:0}
+.gstat{flex:1;background:rgba(255,255,255,.08);border-radius:14px;padding:6px 8px;text-align:center}
+.gstat small{display:block;font-size:11px;color:#AAB6D3;font-weight:600}
+.gstat b{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums}
+.gstat b.low{color:#FF8A8A}
+.gbar{height:8px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:12px;overflow:hidden}
+.gbar i{display:block;height:100%;background:var(--snap);border-radius:4px;transition:width .3s}
+.gnext{font-size:12px;color:#AAB6D3;margin:5px 0 0}
+.glvl{margin:14px 0 0;font-weight:700;font-size:14px;color:#DCE3F5;display:flex;justify-content:space-between}
+.tubes{display:flex;flex-wrap:wrap;justify-content:center;gap:22px 12px;padding-top:24px;min-height:410px;align-content:flex-start}
+.tube{width:48px;height:172px;border:3px solid rgba(255,255,255,.55);border-top-width:0;border-radius:0 0 24px 24px;display:flex;flex-direction:column-reverse;gap:2px;padding:3px;background:rgba(255,255,255,.05);transition:transform .15s,border-color .15s;position:relative}
+.tube::before{content:"";position:absolute;left:-7px;right:-7px;top:-3px;height:5px;border-radius:3px;background:rgba(255,255,255,.55)}
+.tube.sel{transform:translateY(-16px);border-color:var(--snap)}
+.tube.sel::before{background:var(--snap)}
+.tube.full{border-color:#3DDBA4}.tube.full::before{background:#3DDBA4}
+.seg{display:block;height:38px;border-radius:5px;flex:none}
+.seg:first-child{border-radius:5px 5px 18px 18px}
+.gmsg{min-height:40px;text-align:center;font-size:13.5px;color:#DCE3F5;margin-top:8px;padding:0 6px}
+.gctl{display:flex;gap:10px;margin-top:8px}
+.gctl button{flex:1;height:44px;border-radius:22px;background:rgba(255,255,255,.12);color:#fff;font-weight:700}
+.grules{margin:16px 0;padding:0;list-style:none;display:grid;gap:10px}
+.grules li{background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#E6EBF7}
+.gwarn{background:rgba(255,210,63,.12);border:1.5px solid rgba(255,210,63,.5);border-radius:14px;padding:10px 12px;font-size:13px;color:#FFE8A3;line-height:1.45}
+.gdemo{display:flex;justify-content:center;gap:10px;margin:18px 0 6px}
+.gdemo .tube{height:120px;width:38px;pointer-events:none}.gdemo .seg{height:26px}
+.gres{text-align:center;margin:26px 0 10px}
+.gres small{display:block;color:#AAB6D3;font-weight:600}
+.gres b{font-family:var(--display);font-size:48px;font-variant-numeric:tabular-nums}
+.gearn{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.08);border-radius:18px;padding:14px 16px;margin:12px 0}
+.gearn b{font-family:var(--display);font-size:22px;display:block}
+.gearn small{color:#AAB6D3;font-size:13px}
+.gcd{font-size:13.5px;color:#DCE3F5;text-align:center;margin:10px 0 0}
+.gcd b{font-variant-numeric:tabular-nums}
+.gconf{position:absolute;inset:0;background:rgba(10,14,26,.7);display:grid;place-items:end center;padding:0 12px 28px;z-index:5}
+.gconf .mcard{color:var(--ink)}
+
+/* ---------- toast ---------- */
+#toast{position:absolute;left:16px;right:16px;top:112px;z-index:90;display:flex;justify-content:center;pointer-events:none}
+#toast div{pointer-events:auto;background:var(--ink);color:#fff;border-radius:16px;padding:11px 14px;font-weight:600;font-size:13.5px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(20,33,61,.35);transform:translateY(-14px);opacity:0;transition:all .3s;max-width:100%}
+#toast div.on{transform:none;opacity:1}
+#toast button{background:var(--snap);color:var(--ink);border-radius:10px;padding:5px 10px;font-weight:800;font-size:12.5px;flex:none}
+
+
+/* closed panels are hidden from keyboard and screen readers once they slide away */
+.sheet,.nav,.done,.detail,.cam,.form,.modal,.fpanel,.scrim,.hub,.game{visibility:hidden}
+.sheet.open,.nav.open,.done.open,.detail.open,.cam.open,.form.open,.modal.open,.fpanel.open,.scrim.open,.hub.open,.game.open{visibility:visible}
+.sheet:not(.open),.nav:not(.open),.done:not(.open),.detail:not(.open),.cam:not(.open),.form:not(.open),.hub:not(.open),.game:not(.open){transition:transform .4s cubic-bezier(.2,.9,.25,1),visibility 0s linear .45s}
+.modal:not(.open){transition:opacity .2s,visibility 0s linear .25s}
+.fpanel:not(.open),.scrim:not(.open){transition:all .22s,visibility 0s linear .25s}
+
+@media (max-width:900px){
+  .stage{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .views{grid-template-columns:repeat(2,1fr)}
+  .phone-area{min-height:0;padding:20px 8px 40px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.pickup.locked{border-color:#CBD5E1;display:flex;gap:8px;align-items:flex-start;background:#F1F5F9;color:#475569;font-weight:600}
+</style>
+<script>try{if(new URLSearchParams(location.search).get('v'))document.documentElement.classList.add('study');}catch(e){}</script>
+<style>
+html.study .side{display:none!important}
+html.study .stage{grid-template-columns:1fr!important}
+html.study .phone-area{min-height:100vh;padding:8px!important}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="side" aria-label="Prototype controls">
+    <div class="brand"><i id="logo"></i>SnapGive</div>
+    <div class="sub">Iteration 2 prototype · G2T1</div>
+    <div class="now" aria-live="polite"><b id="nowT"></b><p id="nowD"></p></div>
+
+    <div class="grp">Find &amp; collect</div>
+    <div class="views" id="vclaim"></div>
+    <div class="grp">List an item</div>
+    <div class="views" id="vgive"></div>
+    <div class="grp">Search &amp; filter</div>
+    <div class="views" id="vfilter"></div>
+
+    <div class="grp">Games, tokens &amp; power-ups</div>
+    <div class="views" id="vreward"></div>
+
+    <div class="grp">A/B test: Breakdown 2 (collection)</div>
+    <div class="views abv" id="vab"></div>
+    <p class="abnote" id="abnote"></p>
+    <p class="hint">The chosen version stays on everywhere the map appears, including after filtering. To send testers straight into one version, add ?v=A or ?v=B to the end of the page link.</p>
+
+    <div class="grp">Demo helpers</div>
+    <div class="tools">
+      <button class="tbtn" data-tool="fill">Fill in the listing form</button>
+      <button class="tbtn" data-tool="multi">Show item with 2 cancellations</button>
+      <button class="tbtn" data-tool="free">Handbag reserver cancels</button>
+      <button class="tbtn" data-tool="reset">Reset and clear saved cancellations</button>
+      <button class="tbtn" data-tool="tok10">Give me 10 tokens</button>
+      <button class="tbtn" data-tool="skipcd">Skip the 24-hour game wait</button>
+      <button class="tbtn" data-tool="pusoon">Make active power-ups expire in 1 minute</button>
+      <button class="tbtn" data-tool="earlynew">Schedule a new listing for 8 minutes from now</button>
+      <button class="tbtn" data-tool="rwreset">Reset tokens, power-ups and game history</button>
+    </div>
+    <p class="hint">Tokens, power-ups and the game wait are saved in this browser, so they survive a reload (that is how the 24-hour rule is enforced). Only the button above resets them.</p>
+    <p class="hint">To see the queue, open the handbag pin, join the queue, then tap "Handbag reserver cancels". The map is draggable. Cancellations you make are remembered until you reload or reset.</p>
+  </aside>
+
+  <main class="phone-area">
+    <div class="phone-fit" id="fit">
+      <div class="phone" id="phone">
+        <div class="screen" id="screen">
+          <div class="island"></div>
+          <div class="status" id="status"><span>9:41</span><span id="stIcons"></span></div>
+          <div class="homebar" id="homebar"></div>
+
+          <div id="mapvp"><div id="world"></div></div>
+
+          <div id="top">
+            <div class="row">
+              <button class="round" data-act="filter" aria-label="Filter items" id="menuBtn"></button>
+              <button class="tokpill" data-act="hub" id="tokBtn" aria-label="Tokens and power-ups"></button>
+              <button class="round" data-act="camera" aria-label="List an item with your camera" id="camBtn"></button>
+            </div>
+            <div id="pups"></div>
+            <div id="chips"></div>
+          </div>
+          <button class="round" id="gameBtn" data-act="play" aria-label="Play Water Sort"></button>
+          <button class="round" id="recenter" data-act="recenter" aria-label="Centre on my location" style="bottom:300px;display:none"></button>
+
+          <div id="legend" aria-label="Pin colour guide"></div>
+          <div class="sheet" id="sheet"></div>
+          <div class="nav" id="nav"></div>
+          <div class="done" id="done"></div>
+          <div class="detail" id="detail"></div>
+
+          <div class="scrim" id="scrim" data-act="filter"></div>
+          <div class="fpanel" id="fpanel"></div>
+
+          <div class="sheet" id="farp" aria-label="Items further away"></div>
+          <div class="hub" id="hub" aria-label="Games and rewards"></div>
+          <div class="game" id="game" aria-label="Water Sort game"></div>
+
+          <div class="cam" id="cam"></div>
+          <div class="form" id="form"></div>
+
+          <div class="modal" id="modal"></div>
+          <div id="toast"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<input type="file" id="gal" accept="image/*,video/*" multiple hidden>
+
+<script>
+'use strict';
+/* =====================================================================
+   SnapGive – Iteration 2 clickable prototype
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const SC = 2.5;                       // metres per map pixel
+const HOME = {x:800, y:800};          // user's starting point on the 1600px map
+const MIN = 60000, HR = 3600000;
+
+/* ---------- icons (24px grid, stroke) ---------- */
+const ICON = {
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  funnel:'<path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  right:'<path d="m9 18 6-6-6-6"/>',
+  left:'<path d="m15 18-6-6 6-6"/>',
+  up:'<path d="m18 15-6-6-6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  plus:'<path d="M5 12h14M12 5v14"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  flip:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  zap:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+  timer:'<path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/>',
+  walk:'<circle cx="13.5" cy="3.8" r="2"/><path d="M12.6 7.5 11 13.5l-2.5 7M11 13.5l3.2 2.6.8 4.4M12.4 8.6 9 10.6l-1 3M12.4 8.6l2.4 2.9H17"/>',
+  nav:'<path d="M3 11 22 2l-9 19-2-8-8-2z"/>',
+  play:'<path d="M7 4v16l13-8z" fill="currentColor"/>',
+  chev2:'<path d="m6 17 5-5-5-5M13 17l5-5-5-5"/>',
+  locate:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
+  game:'<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor"/><circle cx="18" cy="14" r="1" fill="currentColor"/>',
+  bird:'<path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3M14 17.75V21M7 18a6 6 0 0 0 3.84-10.61"/>',
+  radar:'<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/>',
+  drop:'<path d="M12 2.7 6.3 8.9a8 8 0 1 0 11.4 0z"/>',
+  // category glyphs
+  Furniture:'<path d="M4 9h16M6 9v10M18 9v10M6 15h12"/>',
+  Appliances:'<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="14" r="3"/><path d="M8 7h.01M11 7h.01"/>',
+  Kitchen:'<path d="M5 11h14v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3zM3 11h18M9 7c0-2 2-1.5 2-4M14 7c0-2 2-1.5 2-4"/>',
+  Electronics:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  Books:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  Fashion:'<path d="M6 8h12l1 13H5zM9 8a3 3 0 0 1 6 0"/>',
+  'Home & Living':'<path d="m3 11 9-8 9 8M5 10v10h14V10"/>',
+  Others:'<path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',
+  All:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'
+};
+const ic = (n, s=22, w=2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+const CATS = ['Furniture','Appliances','Kitchen','Electronics','Books','Fashion','Home & Living','Others'];
+
+/* ---------- illustrated item photos ---------- */
+const ARTS = {
+  table:'<ellipse cx="60" cy="96" rx="24" ry="6" fill="#0002"/><rect x="55" y="62" width="10" height="32" fill="#8A5A2B"/><ellipse cx="60" cy="94" rx="18" ry="5" fill="#8A5A2B"/><ellipse cx="60" cy="62" rx="38" ry="11" fill="#B9793D"/><ellipse cx="60" cy="59" rx="38" ry="11" fill="#D99A58"/><rect x="55" y="40" width="10" height="14" rx="2" fill="#F3F4F6"/><path d="M60 40c-6-8-12-6-12-6s2 8 12 6zM60 40c6-8 12-6 12-6s-2 8-12 6z" fill="#34A36B"/>',
+  bag:'<path d="M44 56c0-26 32-26 32 0" fill="none" stroke="#7A2E25" stroke-width="5" stroke-linecap="round"/><path d="M26 56h68l8 44a4 4 0 0 1-4 5H22a4 4 0 0 1-4-5z" fill="#C0503F"/><path d="M26 56h68l2 12H24z" fill="#A83F31"/><rect x="52" y="64" width="16" height="10" rx="2" fill="#F1C86B"/>',
+  cooker:'<ellipse cx="60" cy="102" rx="34" ry="5" fill="#0002"/><rect x="28" y="52" width="64" height="48" rx="12" fill="#F3F4F6" stroke="#CBD2D9" stroke-width="2"/><path d="M28 62a32 24 0 0 1 64 0z" fill="#E1E5EA" stroke="#CBD2D9" stroke-width="2"/><rect x="54" y="30" width="12" height="8" rx="3" fill="#9AA5B1"/><circle cx="60" cy="78" r="7" fill="#fff" stroke="#9AA5B1" stroke-width="2"/><rect x="44" y="90" width="32" height="4" rx="2" fill="#14B885"/>',
+  books:'<rect x="22" y="78" width="76" height="16" rx="3" fill="#7C3AED"/><rect x="28" y="62" width="66" height="16" rx="3" fill="#F59E0B"/><rect x="20" y="46" width="70" height="16" rx="3" fill="#0EA5E9"/><rect x="30" y="84" width="40" height="3" fill="#fff6"/><rect x="36" y="68" width="30" height="3" fill="#fff6"/><rect x="28" y="52" width="36" height="3" fill="#fff6"/>',
+  fryer:'<rect x="30" y="34" width="60" height="64" rx="14" fill="#2B2F36"/><rect x="38" y="46" width="44" height="30" rx="8" fill="#3B424C"/><circle cx="60" cy="86" r="5" fill="#14B885"/><rect x="40" y="26" width="40" height="10" rx="5" fill="#1F2329"/><rect x="82" y="56" width="14" height="8" rx="3" fill="#6B7280"/>',
+  monitor:'<rect x="20" y="30" width="80" height="52" rx="6" fill="#1F2937"/><rect x="25" y="35" width="70" height="42" rx="3" fill="#60A5FA"/><path d="M25 77l22-20 16 14 12-9 20 15z" fill="#2563EB" opacity=".7"/><rect x="55" y="82" width="10" height="12" fill="#6B7280"/><rect x="42" y="94" width="36" height="5" rx="2.5" fill="#4B5563"/>',
+  backpack:'<path d="M50 34c0-14 20-14 20 0" fill="none" stroke="#294A66" stroke-width="5" stroke-linecap="round"/><rect x="30" y="34" width="60" height="68" rx="20" fill="#3F6C8F"/><rect x="40" y="66" width="40" height="28" rx="9" fill="#2F5675"/><path d="M42 74h36" stroke="#9CC3E0" stroke-width="3" stroke-linecap="round"/><rect x="52" y="46" width="16" height="8" rx="3" fill="#F1C86B"/>',
+  coffee:'<rect x="20" y="58" width="80" height="13" rx="4" fill="#B9793D"/><rect x="20" y="55" width="80" height="10" rx="4" fill="#D99A58"/><rect x="26" y="71" width="7" height="25" rx="2" fill="#8A5A2B"/><rect x="87" y="71" width="7" height="25" rx="2" fill="#8A5A2B"/><rect x="33" y="82" width="54" height="5" rx="2" fill="#A06A35"/><rect x="32" y="46" width="24" height="9" rx="2" fill="#0EA5E9"/><rect x="36" y="38" width="22" height="8" rx="2" fill="#F59E0B"/><rect x="72" y="41" width="12" height="14" rx="3" fill="#F3F4F6"/><path d="M78 41c-4-7-9-5-9-5s1 7 9 5zM78 41c4-7 9-5 9-5s-1 7-9 5z" fill="#34A36B"/>',
+  plant:'<path d="M60 70C48 56 44 40 52 28c10 8 14 24 8 42zM60 70c8-16 22-24 34-22-2 14-16 26-34 22z" fill="#34A36B"/><path d="M60 70c-12-4-24-2-30 8 10 6 24 4 30-8z" fill="#2E8B57"/><path d="M38 76h44l-6 28H44z" fill="#C2693B"/><rect x="36" y="72" width="48" height="8" rx="3" fill="#D9804F"/>'
+};
+const BG = {table:['#FBE7CC','#F5D9B3'],bag:['#F9DAD5','#F2C4BD'],cooker:['#DDE8F6','#C9DAEF'],books:['#E8DFF7','#D8CBF0'],fryer:['#D8F1E7','#C3E7D8'],monitor:['#D6ECF7','#C1E0F1'],plant:['#E2F0D4','#D1E6BD'],backpack:['#E9E4F6','#D9D1EE'],coffee:['#FBE7CC','#F5D9B3']};
+const ART_ORDER = ['table','bag','cooker','books','fryer','monitor','plant','backpack','coffee'];
+// A photo is a tiny flat scene: off-white wall, a table top, and the item sitting on it.
+// Drawn in item space (120 x 120 box) and extended well past the edges so it can fill a taller camera view.
+function sceneInner(name, flip){
+  const wall = flip ? '#F1F3F7' : '#F6F7FA', floor = flip ? '#D5DBE5' : '#DCE1E9', edge = flip ? '#E6EAF1' : '#EBEEF4';
+  return `<rect x="-400" y="-400" width="920" height="492" fill="${wall}"/>
+    <g ${flip?'transform="translate(120 0) scale(-1 1)"':''}><path d="M-6 -400 L58 -400 L18 92 L-70 92 Z" fill="#fff" opacity=".65"/></g>
+    <rect x="-400" y="80" width="920" height="12" fill="#E8EBF1"/>
+    <rect x="-400" y="92" width="920" height="500" fill="${floor}"/>
+    <rect x="-400" y="92" width="920" height="3" fill="${edge}"/>
+    <ellipse cx="60" cy="99" rx="34" ry="5.5" fill="#14213D" opacity=".14"/>
+    <g ${flip?'transform="translate(120 0) scale(-1 1)"':''}>${ARTS[name]}</g>`;
+}
+function art(name, flip){
+  return `<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true">${sceneInner(name,flip)}</svg>`;
+}
+
+
+/* ---------- map geometry: roads, buildings, walking graph ---------- */
+const XS=[0,300,560,800,1040,1300,1600], YS=[0,300,520,800,1080,1300,1600];
+const HROADS=[[300,12],[520,10],[800,20],[1080,12],[1300,10]], VROADS=[[300,10],[560,12],[800,12],[1040,10],[1300,12]];
+const DM=980/1140, DX0=0, DX1=1130;          // the diagonal avenue runs exactly through the home junction (800, 800)
+const dY = x => 800 - DM*(x-800);
+function diagX(px,py){ return Math.max(DX0,Math.min(DX1,(px-DM*(py-800)+800*DM*DM)/(1+DM*DM))); }
+function distToDiag(px,py){ const x=diagX(px,py); return Math.hypot(px-x,py-dY(x)); }
+const DCLEAR=20;                              // half the avenue + breathing room
+function hitsDiag(b){ for(let i=0;i<=8;i++) for(let j=0;j<=8;j++){ if(distToDiag(b.x+b.w*i/8,b.y+b.h*j/8)<DCLEAR) return true; } return false; }
+function overlaps(a,b,m=8){ return !(a.x+a.w+m<=b.x||b.x+b.w+m<=a.x||a.y+a.h+m<=b.y||b.y+b.h+m<=a.y); }
+function genBuildings(){
+  let rnd=7; const R=()=>{rnd=(rnd*9301+49297)%233280; return rnd/233280;};
+  const out=[]; const nx=DM/Math.hypot(1,DM), ny=1/Math.hypot(1,DM);
+  for(let i=0;i<XS.length-1;i++) for(let j=0;j<YS.length-1;j++){
+    const x0=XS[i],x1=XS[i+1],y0=YS[j],y1=YS[j+1];
+    if(i===4&&j===2) continue;                // park
+    const n=2+Math.floor(R()*3), here=[];
+    for(let k=0;k<n;k++){
+      const w=(x1-x0-40)/2*(0.7+R()*.3), h=(y1-y0-40)/2*(0.6+R()*.4);
+      const bx=x0+20+(k%2)*((x1-x0-40)/2)+R()*6, by=y0+20+Math.floor(k/2)*((y1-y0-40)/2)+R()*6;
+      let b={x:Math.round(bx),y:Math.round(by),w:Math.round(w),h:Math.round(h)};
+      if(hitsDiag(b)){
+        // shift the building sideways, off the avenue, but keep it inside its own block
+        let placed=null;
+        for(const sc of [1,.82,.66]){
+          const cx=b.x+b.w/2, cy=b.y+b.h/2, w2=b.w*sc, h2=b.h*sc;
+          for(let d=0; d<=160 && !placed; d+=4) for(const sg of [1,-1]){
+            const c={x:Math.round(cx-w2/2+sg*d*nx), y:Math.round(cy-h2/2+sg*d*ny), w:Math.round(w2), h:Math.round(h2)};
+            if(c.x<x0+16||c.y<y0+16||c.x+c.w>x1-16||c.y+c.h>y1-16) continue;
+            if(hitsDiag(c)||here.some(o=>overlaps(c,o))) continue;
+            placed=c; break;
+          }
+          if(placed) break;
+        }
+        b=placed;
+      }
+      if(b){ here.push(b); out.push(b); }
+    }
+  }
+  return out;
+}
+const BUILDINGS=genBuildings();
+// Pins sit on a building: take the point of the nearest free building closest to where the item "really" is.
+function snapToBuilding(T, used){
+  let best=null;
+  BUILDINGS.forEach((b,i)=>{ if(used.has(i)) return;
+    const cx=Math.min(b.x+b.w-12,Math.max(b.x+12,T.x)), cy=Math.min(b.y+b.h-12,Math.max(b.y+12,T.y)), d=Math.hypot(cx-T.x,cy-T.y);
+    if(!best||d<best.d) best={i,x:cx,y:cy,d}; });
+  if(!best) return {x:T.x,y:T.y};
+  used.add(best.i); return {x:best.x,y:best.y};
+}
+function buildingAt(p){ return BUILDINGS.findIndex(b=>p.x>=b.x-1&&p.x<=b.x+b.w+1&&p.y>=b.y-1&&p.y<=b.y+b.h+1); }
+
+// Walking graph: every road is a polyline of junctions; people walk along roads only.
+const ROADS=[];
+HROADS.forEach(([y])=>ROADS.push({k:'H',c:y,lo:0,hi:1600}));
+VROADS.forEach(([x])=>ROADS.push({k:'V',c:x,lo:0,hi:1600}));
+ROADS.push({k:'D',lo:DX0,hi:DX1});
+const rp=(r,t)=> r.k==='H'?{x:t,y:r.c} : r.k==='V'?{x:r.c,y:t} : {x:t,y:dY(t)};
+const NODES=new Map(), RN=ROADS.map(()=>[]), ADJ=new Map();
+function nodeId(x,y){ const k=Math.round(x*4)+','+Math.round(y*4); if(!NODES.has(k)) NODES.set(k,{id:k,x,y}); return k; }
+function link(adj,a,b,d){ if(!adj.has(a)) adj.set(a,[]); if(!adj.has(b)) adj.set(b,[]); adj.get(a).push({to:b,d}); adj.get(b).push({to:a,d}); }
+ROADS.forEach((a,ai)=>ROADS.forEach((b,bi)=>{
+  if(bi<=ai) return; let q=null;
+  if(a.k==='H'&&b.k==='V') q={x:b.c,y:a.c}; else if(a.k==='V'&&b.k==='H') q={x:a.c,y:b.c};
+  else if(a.k==='D'||b.k==='D'){ const o=a.k==='D'?b:a;
+    if(o.k==='H'){ const x=800+(800-o.c)/DM; if(x>=DX0&&x<=DX1) q={x,y:o.c}; }
+    else { if(o.c>=DX0&&o.c<=DX1) q={x:o.c,y:dY(o.c)}; } }
+  if(!q) return; const id=nodeId(q.x,q.y);
+  [[ai,a],[bi,b]].forEach(([ri,r])=>RN[ri].push({t:r.k==='V'?q.y:q.x,id}));
+}));
+RN.forEach(l=>{ l.sort((a,b)=>a.t-b.t); for(let i=1;i<l.length;i++){ if(l[i].id===l[i-1].id) continue; const A=NODES.get(l[i-1].id),B=NODES.get(l[i].id); link(ADJ,A.id,B.id,Math.hypot(A.x-B.x,A.y-B.y)); } });
+function nearestRoad(p){
+  let best=null;
+  ROADS.forEach((r,ri)=>{ let t;
+    if(r.k==='H') t=p.x; else if(r.k==='V') t=p.y; else t=diagX(p.x,p.y);
+    t=Math.max(r.lo,Math.min(r.hi,t)); const q=rp(r,t), d=Math.hypot(q.x-p.x,q.y-p.y);
+    if(!best||d<best.d) best={ri,t,pt:q,d}; });
+  return best;
+}
+function buildRoute(A,B){
+  const sa=nearestRoad(A), sb=nearestRoad(B);
+  const adj=new Map(); ADJ.forEach((v,k)=>adj.set(k,v.slice()));
+  const xy=id=> id==='S'?sa.pt : id==='E'?sb.pt : NODES.get(id);
+  const nbrs=sp=>{ const l=RN[sp.ri]; let lo=null,hi=null; for(const n of l){ if(n.t<=sp.t) lo=n; if(n.t>=sp.t&&!hi) hi=n; } return {lo,hi}; };
+  const na=nbrs(sa), nb=nbrs(sb);
+  [['S',sa,na],['E',sb,nb]].forEach(([id,sp,n])=>{ [n.lo,n.hi].forEach(x=>{ if(x){ const q=NODES.get(x.id); link(adj,id,x.id,Math.hypot(q.x-sp.pt.x,q.y-sp.pt.y)); } }); });
+  if(sa.ri===sb.ri && na.lo===nb.lo && na.hi===nb.hi) link(adj,'S','E',Math.hypot(sa.pt.x-sb.pt.x,sa.pt.y-sb.pt.y));
+  // Dijkstra on a small graph
+  const dist={S:0}, prev={}, todo=new Set(adj.keys());
+  while(todo.size){ let u=null; todo.forEach(k=>{ if(dist[k]!==undefined&&(u===null||dist[k]<dist[u])) u=k; }); if(u===null||u==='E') break; todo.delete(u);
+    (adj.get(u)||[]).forEach(e=>{ const nd=dist[u]+e.d; if(dist[e.to]===undefined||nd<dist[e.to]){ dist[e.to]=nd; prev[e.to]=u; } }); }
+  let pts=[A];
+  if(dist.E===undefined){ pts.push(B); return pts; }
+  const ids=[]; for(let c='E'; c; c=prev[c]) ids.unshift(c);
+  ids.forEach(id=>{ const q=xy(id); pts.push({x:q.x,y:q.y}); }); pts.push({x:B.x,y:B.y});
+  return pts.filter((q,i)=> i===0 || Math.hypot(q.x-pts[i-1].x,q.y-pts[i-1].y)>0.5 || i===pts.length-1);
+}
+
+/* =====================================================================
+   Rewards: tokens, power-ups and token-earning games
+   All rules are enforced here, not only in the UI. State is saved in this
+   browser (localStorage) so balances, power-up timers and the 24-hour game
+   wait survive reloads and restarts.
+   ===================================================================== */
+const RCFG = {
+  COST:5,                 // tokens per power-up activation
+  MIN_TO_ACTIVATE:5,      // cannot activate with fewer tokens than this
+  PU_MS:48*HR,            // each activation lasts exactly 48 hours
+  EARLY_MS:10*MIN,        // Early Bird sees listings this long before release
+  BASE_RADIUS_KM:1,       // normal collection radius
+  BOOST_EXTRA_KM:2,       // Proximity Boost adds this much (1 km -> 3 km)
+  GAME_COOLDOWN:24*HR,    // one game per 24 hours, counted from when a game starts
+  PTS_PER_TOKEN:10000,    // 1 token per full 10,000 points
+  GAME_MS:3*MIN,          // length of one Water Sort game
+  MAX_GAME_SCORE:300000,  // anything above this cannot come from a real game
+  // Water Sort scoring: points are only given when a puzzle is solved
+  PTS_PER_COLOUR:600,     // difficulty: 3 colours = 1,800, 6 colours = 3,600
+  COMPLETE_BONUS:300,     // for finishing the puzzle
+  EFFICIENCY_MAX:600,     // full bonus at or under the target moves
+  EFFICIENCY_STEP:60,     // bonus lost per move over the target
+  MAX_PER_PUZZLE:4500     // 6 colours x 600 + 300 + 600
+};
+const POWERUPS = {
+  early:{name:'Early Bird', icon:'bird', blurb:()=>`See new listings ${RCFG.EARLY_MS/MIN} minutes before everyone else.`},
+  boost:{name:'Proximity Boost', icon:'radar', blurb:()=>`Collect from up to ${RCFG.BASE_RADIUS_KM+RCFG.BOOST_EXTRA_KM} km away instead of ${RCFG.BASE_RADIUS_KM} km.`}
+};
+// Add more token-earning games here later; each needs a name, blurb and a way to open it.
+const GAMES = {
+  watersort:{name:'Water Sort', icon:'drop', blurb:'Pour the colours so each tube holds just one colour.'}
+};
+const fmtN = n => Number(n).toLocaleString('en-SG');
+const fmtLeft = ms => { const m=Math.max(0,Math.ceil(ms/MIN)), h=Math.floor(m/60); return h ? `${h} h ${m%60} min` : `${m} min`; };
+const fmtHrs = ms => { const m=Math.max(0,Math.ceil(ms/MIN)), h=Math.floor(m/60), r=m%60; return (h?`${h} hr${h===1?'':'s'} `:'')+`${r} min${r===1?'':'s'}`; };
+const fmtClock = ts => new Date(ts).toLocaleString('en-SG',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+const RK='snapgive.rewards.v1';
+const Rw = (()=>{
+  let mem=null;
+  const blank=()=>({v:1,balance:0,ledger:[],pu:{},game:{lastStart:0,current:null,history:[]},maxSeen:0});
+  function load(){
+    if(mem) return mem;
+    let st=null; try{ st=JSON.parse(localStorage.getItem(RK)||'null'); }catch(e){}
+    const ok = st && st.v===1 && Number.isInteger(st.balance) && st.balance>=0 && st.game && st.pu;
+    mem = ok ? st : blank(); return mem;
+  }
+  function save(){ try{ localStorage.setItem(RK, JSON.stringify(mem)); }catch(e){} }
+  // Never let time run backwards: if the device clock is moved back, keep using the latest time seen.
+  function now(){ const st=load(), t=Date.now(); if(t>st.maxSeen) st.maxSeen=t; return Math.max(t, st.maxSeen); }
+  const until = k => { const a=load().pu[k]; return a ? a.at+RCFG.PU_MS : 0; };
+  const active = k => until(k) > now();
+  const leftMs = k => Math.max(0, until(k)-now());
+  const log = (d,why) => { const st=load(); st.ledger.unshift({ts:now(),d,why}); st.ledger=st.ledger.slice(0,30); };
+  return {
+    now, until, active, leftMs,
+    balance: () => load().balance,
+    ledger: () => load().ledger,
+    radiusKm: () => RCFG.BASE_RADIUS_KM + (active('boost') ? RCFG.BOOST_EXTRA_KM : 0),
+    activate(k){
+      const st=load(), P=POWERUPS[k];
+      if(!P) return {ok:false, msg:'That power-up does not exist.'};
+      if(active(k)) return {ok:false, msg:`${P.name} is already on, with ${fmtLeft(leftMs(k))} left. You can switch it on again once it ends.`};
+      if(st.balance<RCFG.MIN_TO_ACTIVATE || st.balance<RCFG.COST) return {ok:false, code:'funds', msg:`You need ${RCFG.COST} tokens for ${P.name}. You have ${st.balance}. Play Water Sort from the game button on the map to earn more.`};
+      const t=now(); st.balance-=RCFG.COST; st.pu[k]={at:t}; log(-RCFG.COST, `${P.name} switched on for 48 h`); save();   // one save: tokens and activation change together
+      return {ok:true, balance:st.balance, msg:`${P.name} is on for 48 hours. ${RCFG.COST} tokens spent, ${st.balance} left.`};
+    },
+    canPlay(){ const g=load().game; return !g.lastStart || now()-g.lastStart >= RCFG.GAME_COOLDOWN; },
+    nextPlayAt(){ const g=load().game; return g.lastStart ? g.lastStart+RCFG.GAME_COOLDOWN : 0; },
+    startGame(gid){
+      const st=load();
+      if(!GAMES[gid]) return {ok:false, msg:'That game is not available.'};
+      if(!this.canPlay()) return {ok:false, msg:`You have already played today. Your next game is at ${fmtClock(this.nextPlayAt())}.`};
+      const t=now(), id='g'+t.toString(36)+Math.random().toString(36).slice(2,7);
+      st.game.lastStart=t;                         // the 24-hour wait starts now, when the game starts
+      st.game.current={id, gid, start:t, status:'started'};
+      save(); return {ok:true, id};
+    },
+    finishGame(id, score, solved){
+      const st=load(), c=st.game.current;
+      if(!c || c.id!==id) return {ok:false, msg:'This game has already ended.'};
+      if(c.status!=='started') return {ok:false, msg:'Tokens for this game have already been added.'};
+      score=Math.floor(Number(score)); if(!Number.isFinite(score)||score<0) score=0;
+      solved=Math.max(0,Math.floor(Number(solved)||0));
+      const t=now(), secs=(t-c.start)/1000;
+      // Points only come from solved puzzles, so a score is accepted only if it fits the number solved
+      // (at most 4,500 each), no puzzle took under a second, and it stays under the overall ceiling.
+      const cap=Math.min(RCFG.MAX_GAME_SCORE, solved*RCFG.MAX_PER_PUZZLE);
+      if(score>cap || solved>secs+1){ c.status='rejected'; c.end=t; st.game.history.unshift({...c}); save(); return {ok:false, msg:"That score couldn't be checked, so no tokens were added."}; }
+      const tokens=Math.floor(score/RCFG.PTS_PER_TOKEN);   // tokensEarned = Math.floor(finalScore / 10000); leftover points are not carried over
+      c.status='completed'; c.score=score; c.solved=solved; c.tokens=tokens; c.end=t;
+      st.balance+=tokens; if(tokens) log(tokens, `Water Sort, ${fmtN(score)} points`);
+      st.game.history.unshift({...c}); st.game.history=st.game.history.slice(0,10);
+      save(); return {ok:true, tokens, score, solved, balance:st.balance};
+    },
+    // A game still marked "started" when the page loads was cut off (reload, closed tab). It ends with no tokens.
+    abandonStale(){
+      const st=load(), c=st.game.current;
+      if(c && c.status==='started'){ c.status='abandoned'; c.end=now(); st.game.history.unshift({...c}); save(); return true; }
+      return false;
+    },
+    persistClock(){ save(); },
+    // ----- demo helpers (sidebar only) -----
+    demoAdd(n){ const st=load(); st.balance+=n; log(n,'Demo top-up'); save(); },
+    demoSkipWait(){ const st=load(); if(st.game.lastStart) st.game.lastStart=now()-RCFG.GAME_COOLDOWN-1000; save(); },
+    demoExpireSoon(){ const st=load(); let n=0; Object.keys(st.pu).forEach(k=>{ if(active(k)){ st.pu[k].at=now()-RCFG.PU_MS+60*1000; n++; } }); save(); return n; },
+    demoReset(){ mem=blank(); save(); }
+  };
+})();
+
+/* ---------- Water Sort ---------- */
+const WS = {
+  COL:['#F05A47','#3B82F6','#22C55E','#FACC15','#A855F7','#F472B6'],
+  NAMES:['red','blue','green','yellow','purple','pink'],
+  st:null, timer:null,
+  begin(){
+    if(this.st && !this.st.over){ S.game=true; S.hub=false; render(); return; }
+    const r=Rw.startGame('watersort');
+    if(!r.ok){ toast(r.msg); render(); return; }
+    this.st={id:r.id, end:Date.now()+RCFG.GAME_MS, score:0, level:0, over:false, res:null, busy:false};
+    this.newLevel(); this.st.msg='Tap a tube, then tap another tube to pour.';
+    S.game=true; S.hub=false; S.gConfirm=false; render();
+    clearInterval(this.timer); this.timer=setInterval(()=>this.tick(),250);
+  },
+  tick(){
+    const s=this.st; if(!s||s.over) return;
+    const l=s.end-Date.now(), e=document.getElementById('gTime');
+    if(e){ e.textContent=fmtT(l).slice(2); e.classList.toggle('low', l<20000); }
+    if(l<=0) this.finish(true);
+  },
+  newLevel(){
+    const s=this.st; s.level++; s.n=[3,3,4,4,5,5][s.level-1]||6;
+    s.tubes=this.gen(s.n); s.init=s.tubes.map(t=>t.slice()); s.moves=0; s.sel=null; s.lvT0=Date.now(); s.best=0; s.lvPts=0;
+  },
+  par: n => n*2+2,           // target moves for the full efficiency bonus
+  maxFor(n){ return RCFG.PTS_PER_COLOUR*n + RCFG.COMPLETE_BONUS + RCFG.EFFICIENCY_MAX; },
+  complete: t => t.length===4 && t.every(v=>v===t[0]),
+  solved(t){ return t.every(x=>!x.length || this.complete(x)); },
+  canPour(t,a,b){
+    const A=t[a], B=t[b]; if(a===b || !A.length || B.length>=4 || this.complete(A)) return false;
+    return !B.length || B[B.length-1]===A[A.length-1];
+  },
+  pour(t,a,b){ const A=t[a], B=t[b], c=A[A.length-1]; let k=0; while(A.length && A[A.length-1]===c && B.length<4){ B.push(A.pop()); k++; } return k; },
+  solvable(t0){
+    const seen=new Set(); let nodes=0;
+    const key=t=>t.map(x=>x.join('')).sort().join('|');
+    const dfs=t=>{
+      if(this.solved(t)) return true; if(++nodes>40000) return false;
+      const k=key(t); if(seen.has(k)) return false; seen.add(k);
+      for(let a=0;a<t.length;a++) for(let b=0;b<t.length;b++){
+        if(!this.canPour(t,a,b)) continue;
+        const A=t[a]; if(!t[b].length && A.every(v=>v===A[0])) continue;   // pointless move
+        const c=t.map(x=>x.slice()); this.pour(c,a,b); if(dfs(c)) return true;
+      }
+      return false;
+    };
+    return dfs(t0.map(x=>x.slice()));
+  },
+  gen(n){
+    for(let tries=0; tries<300; tries++){
+      const u=[]; for(let c=0;c<n;c++) for(let k=0;k<4;k++) u.push(c);
+      for(let i=u.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [u[i],u[j]]=[u[j],u[i]]; }
+      const t=[]; for(let i=0;i<n;i++) t.push(u.slice(i*4,i*4+4)); t.push([],[]);
+      if(t.some(x=>this.complete(x))) continue;
+      if(this.solvable(t)) return t;
+    }
+    const t=[]; for(let i=0;i<n;i++) t.push([i,(i+1)%n,i,(i+1)%n]); t.push([],[]); return t;
+  },
+  tap(i){
+    const s=this.st; if(!s||s.over||s.busy) return;
+    const T=s.tubes;
+    if(s.sel===null){
+      if(!T[i].length) s.msg='That tube is empty. Pick one with colour in it first.';
+      else if(this.complete(T[i])) s.msg='That tube is already sorted.';
+      else { s.sel=i; s.msg='Now tap the tube to pour into.'; }
+    } else if(s.sel===i){ s.sel=null; s.msg='Tap a tube, then tap another tube to pour.'; }
+    else if(this.canPour(T,s.sel,i)){
+      this.pour(T,s.sel,i); s.moves++; s.sel=null; s.msg='';
+      const done=T.filter(x=>this.complete(x)).length;
+      if(done>s.best){ s.msg='Tube sorted. Points are added when the whole puzzle is solved.'; s.best=done; }
+      if(this.solved(T)) return this.levelDone();
+    } else {
+      s.msg="Can't pour there. The top colours must match, or the tube must be empty, and it needs space.";
+      s.sel = (T[i].length && !this.complete(T[i])) ? i : null;
+    }
+    renderGame();
+  },
+  levelDone(){
+    // Points are only given here, once per puzzle. Skipping, restarting or extra moves never add points.
+    const s=this.st, par=this.par(s.n);
+    const base=RCFG.PTS_PER_COLOUR*s.n, done=RCFG.COMPLETE_BONUS, eff=Math.max(0,RCFG.EFFICIENCY_MAX-RCFG.EFFICIENCY_STEP*Math.max(0,s.moves-par)), add=base+done+eff;
+    const from=s.score; s.score+=add; s.lvPts=add; s.solved=(s.solved||0)+1; s.busy=true;
+    s.msg=`Puzzle solved! +${fmtN(add)}: difficulty ${fmtN(base)}, completion ${fmtN(done)}, efficiency ${fmtN(eff)} (${s.moves} moves, target ${par}).`;
+    renderGame(); countUp('#gScore', from, s.score);
+    setTimeout(()=>{ if(this.st!==s||s.over) return; s.busy=false; this.newLevel(); s.msg=`Puzzle ${s.level}: ${s.n} colours.`; renderGame(); },1200);
+  },
+  restart(){ const s=this.st; if(!s||s.over||s.busy) return; s.tubes=s.init.map(t=>t.slice()); s.sel=null; s.msg='Puzzle restarted. Your move count carries on, so restarting does not reset the efficiency bonus.'; renderGame(); },
+  skip(){ const s=this.st; if(!s||s.over||s.busy) return; this.newLevel(); s.msg=`Skipped with no points. Level ${s.level}: ${s.n} colours.`; renderGame(); },
+  finish(timeUp){
+    const s=this.st; if(!s||s.over) return;
+    s.over=true; s.timeUp=!!timeUp; clearInterval(this.timer); S.gConfirm=false;
+    const r=Rw.finishGame(s.id, s.score, s.solved); s.res=r;
+    if(r.ok) toast(r.tokens ? `+${r.tokens} token${r.tokens>1?'s':''} earned! You now have ${r.balance}.` : 'Game over. Reach 10,000 points to earn a token.');
+    else toast(r.msg);
+    render(); const tb=$('#tokBtn'); if(tb&&r.ok&&r.tokens){ tb.classList.remove('bump'); void tb.offsetWidth; tb.classList.add('bump'); }
+  }
+};
+// Points tick up slowly on screen instead of jumping.
+function countUp(sel, from, to){ const t0=performance.now(), d=1100; const f=now=>{ const el=document.querySelector(sel); if(!el) return; const k=Math.min(1,(now-t0)/d), v=Math.round(from+(to-from)*(1-Math.pow(1-k,3))); el.textContent=fmtN(v); if(k<1) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+const tubeHTML = (t,i,cls='') => `<button class="tube ${cls}" ${i===null?'tabindex="-1" aria-hidden="true"':`data-act="gTube" data-i="${i}" aria-label="Tube ${i+1}: ${t.length?t.map(c=>WS.NAMES[c]).join(', ')+' (bottom to top)':'empty'}"`}>${t.map(c=>`<i class="seg" style="background:${WS.COL[c]}"></i>`).join('')}</button>`;
+
+/* ---------- state ---------- */
+let S;
+function initState(){
+  const t = Date.now();
+  const P = (dx,dy) => ({x:HOME.x+dx/SC, y:HOME.y+dy/SC});
+  S = {
+    items:[
+      {id:'tableL', title:'Coffee Table', cat:'Furniture', art:'coffee', addr:'56 Kent Lane, #03-18', instr:'Table is 1.2 m wide, please bring someone to help carry.', desc:'Wooden coffee table with a rectangular top and light wear on the legs.', ...P(-195,468), exp:t+6*HR, listed:t-25*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'tableS', title:'Coffee Table', cat:'Furniture', art:'table', addr:'12 Library Walk, #08-12', instr:'Left outside #08-12, beside the shoe rack.', desc:'Small round coffee table, a few light scuffs.', ...P(-185,858), exp:t+4*HR+29*MIN+57e3, listed:t-40*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'handbag', title:'Handbag', cat:'Fashion', art:'bag', addr:'88 IDP Road', instr:'Hanging on the gate, left side.', desc:'Used handbag with a magnetic clasp.', ...P(-120,-110), exp:t+2*HR+10*MIN, listed:t-90*MIN, status:'reserved', by:'other', queue:[], cancelled:[]},
+      {id:'rice', title:'Rice Cooker', cat:'Appliances', art:'cooker', addr:'12 Kent Lane', instr:'With the guard at the lobby counter.', desc:'1.8L rice cooker. Works fine, inner pot has light wear.', ...P(170,-160), exp:t+3*HR, listed:t-10*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'backpack', title:'Backpack', cat:'Fashion', art:'backpack', addr:'41 Library Walk', instr:'On the bench outside the lift lobby.', desc:'Blue backpack with a laptop sleeve and two front pockets.', ...P(90,140), exp:t+5*HR, listed:t-4*HR, status:'available', by:null, queue:[], cancelled:[{reason:'Product does not match listing',ts:t-35*MIN},{reason:'Product does not match listing',ts:t-100*MIN}]},
+      {id:'books', title:'Textbook Bundle', cat:'Books', art:'books', addr:'5 Library Walk', instr:'In the blue bag on the bench.', desc:'Three first-year textbooks, some highlighting.', ...P(-200,250), exp:t+47*MIN, listed:t-3*HR, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'fryer', title:'Air Fryer', cat:'Kitchen', art:'fryer', addr:'27 Orchard Close', instr:'Ring the bell, I will hand it over.', desc:'4L air fryer, basket recently cleaned.', ...P(240,330), exp:t+5*HR+40*MIN, listed:t-6*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'monitor', title:'24" Monitor', cat:'Electronics', art:'monitor', addr:'301 Bridge Road', instr:'Leaning against the letterboxes.', desc:'1080p monitor, HDMI cable included.', ...P(-300,-520), exp:t+6*HR, listed:t-5*HR, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'plant', title:'Potted Plant Set', cat:'Home & Living', art:'plant', addr:'9 Garden Row', instr:'Pots are by the front steps.', desc:'Three potted plants, easy to look after.', ...P(-330,700), exp:t+9*HR, listed:t-2*HR, status:'available', by:null, queue:[], cancelled:[]},
+      // Scheduled listings: hidden from everyone until their release time. Early Bird users see them up to 10 minutes sooner.
+      {id:'earlyCooker', title:'Mini Rice Cooker', cat:'Appliances', art:'cooker', addr:'20 Kent Lane, #05-02', instr:'In a box beside the door.', desc:'0.8L rice cooker for one or two people. Works well.', ...P(240,-330), release:t+6*MIN, listed:t+6*MIN, exp:t+6*MIN+4*HR, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'earlyBag', title:'Canvas Tote Bag', cat:'Fashion', art:'bag', addr:'7 Library Walk', instr:'Hanging on the gate.', desc:'Large tote bag, washed and clean.', ...P(-360,-260), release:t+9*MIN, listed:t+9*MIN, exp:t+9*MIN+4*HR, status:'available', by:null, queue:[], cancelled:[]},
+      // Items beyond this map. Normal collection radius is 1 km; Proximity Boost extends it.
+      {id:'farBooks', title:'Novel Collection (20 books)', cat:'Books', art:'books', addr:'Blk 8 Garden Row, #04-11', instr:'Two paper bags outside the unit.', desc:'Mostly paperback fiction in good condition.', km:1.5, dir:[430,-560], exp:t+8*HR, listed:t-50*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'farFryer', title:'Air Fryer (5L)', cat:'Kitchen', art:'fryer', addr:'Blk 21 Orchard Close, #10-03', instr:'With the security guard at the lobby.', desc:'5L air fryer, works perfectly, basket washed.', km:2.2, dir:[-620,-170], exp:t+7*HR, listed:t-35*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'farMonitor', title:'27" Monitor', cat:'Electronics', art:'monitor', addr:'33 Bridge Road, #02-09', instr:'Leaning on the letterboxes, in its box.', desc:'1440p monitor with stand and cables.', km:2.8, dir:[640,230], exp:t+6*HR, listed:t-2*HR, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'farPlant', title:'Large Monstera Plant', cat:'Home & Living', art:'plant', addr:'4 Kent Lane, #01-01', instr:'By the loading bay.', desc:'Healthy plant in a heavy ceramic pot.', km:4.6, dir:[-560,560], exp:t+9*HR, listed:t-3*HR, status:'available', by:null, queue:[], cancelled:[]}
+    ],
+    user:{...HOME}, heading:35,
+    filters:{cat:'All', prox:null, time:null},
+    sel:null, detail:false, claim:null, collected:null,
+    filterOpen:false, camera:false, form:false, modal:null, durFrom:null,
+    draft:null, dur:{h:4,m:30}, durSet:false, durPreset:null,
+    zoom:1, mode:'photo', rec:null, camSub:0, torch:false,
+    pan:{x:0,y:0}, justPublished:null, walk:null, cancelReason:null, cancelText:'', uid:0,
+    hub:false, game:false, gConfirm:false, farOpen:false, lockFrom:null, puBusy:null, justClaimed:false
+  };
+  S.items.forEach(it=>{ if(it.release===undefined) it.release=it.listed; });
+  { const used=new Set(); S.items.forEach(it=>{ if(it.km) return; const q=snapToBuilding({x:it.x,y:it.y},used); it.x=q.x; it.y=q.y; });
+    // Far items are really kilometres away; with Proximity Boost they are drawn near the edge of the map, in their direction from you.
+    S.items.forEach(it=>{ if(!it.km||!it.dir) return; const q=snapToBuilding({x:HOME.x+it.dir[0], y:HOME.y+it.dir[1]},used); it.x=q.x; it.y=q.y; }); }
+  loadCache().forEach(c=>{ const it=item(c.id); if(it) it.cancelled.push({reason:c.reason,custom:c.custom,ts:c.ts,you:true}); });
+  focusAt(S.user.x, S.user.y, 195, 340, false);   // start higher so no pins sit behind the bottom row
+}
+const esc = t => String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WINDOW = 12*HR;
+const recentCancels = it => (it.cancelled||[]).filter(c => Date.now()-c.ts < WINDOW).sort((a,b)=>b.ts-a.ts);
+function ago(ts){ const m=Math.max(0,Math.floor((Date.now()-ts)/MIN)); if(m<1) return 'just now'; if(m<60) return m+' min ago'; const h=Math.floor(m/60), r=m%60; return h+' h'+(r?' '+r+' min':'')+' ago'; }
+const NOTE = 'Only the last 12 hours of cancellations are shown. Older ones are cleared.';
+function cancelListHTML(it, cls=''){ return `<ul class="clist ${cls}">${recentCancels(it).map(c=>`<li><div class="rs ${c.custom?'cu':''}">${c.custom?'“'+esc(c.reason)+'”':esc(c.reason)}</div><div class="rm2">${c.you?'<span class="you">You</span>':''}<span>${ago(c.ts)}</span></div></li>`).join('')}</ul>`; }
+// red = you cancelled it, or 2+ people did. A single cancellation by someone else is a quieter amber note.
+function cancelSev(it){ const rc=recentCancels(it); return !rc.length ? '' : (rc.some(c=>c.you)||rc.length>1) ? 'red' : 'amber'; }
+function cancelTitle(it){ const rc=recentCancels(it), y=rc.filter(c=>c.you).length, o=rc.length-y;
+  if(y&&!o) return y>1?`You cancelled this ${y} times`:'You cancelled this pickup';
+  if(y&&o) return `You and ${o} other${o>1?'s':''} cancelled`;
+  return `${o} ${o>1?'people':'person'} cancelled this pickup`; }
+const CK='snapgive.cancels.v1';
+// Cancellations you make are remembered while this page stays open (jumping between views keeps them).
+// Reloading the page or pressing Reset starts clean, so every demo begins with no cancellations.
+let CANCEL_CACHE=[];
+try{ localStorage.removeItem(CK); }catch(e){}
+function loadCache(){ return CANCEL_CACHE.filter(c=>Date.now()-c.ts<WINDOW); }
+function saveCache(a){ CANCEL_CACHE=a; }
+const item = id => S.items.find(i => i.id === id);
+const dist = it => it.km ? Math.round(it.km*1000) : Math.round(Math.hypot(it.x-S.user.x, it.y-S.user.y)*SC);
+const transitMin = km => Math.round(12 + km*2.4);
+const walkMin = m => Math.max(1,Math.round(m/80));
+const fmtDist = m => m>=1000 ? (m/1000).toFixed(1)+' km' : m+' m';
+const left = it => it.exp - Date.now();
+function fmtT(ms){ ms=Math.max(0,ms); const s=Math.floor(ms/1000); return Math.floor(s/3600)+':'+String(Math.floor(s%3600/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+// A listing is public from its release time. Early Bird users see it up to 10 minutes before that.
+function released(it){ if(it.mine) return true; const r=it.release||0, n=Date.now(); return r<=n || (Rw.active('early') && r-n<=RCFG.EARLY_MS); }
+const isEarly = it => !it.mine && (it.release||0) > Date.now();
+function matchesFilters(it){
+  const f=S.filters, now=Date.now();
+  return (f.cat==='All'||it.cat===f.cat)
+    && (!f.prox || dist(it)<=f.prox)
+    && (!f.time || (f.time==='just' ? now-it.listed<30*MIN : left(it)<HR));
+}
+function visibleItems(){
+  return S.items.filter(it => !it.km && left(it)>0 && released(it) && matchesFilters(it));
+}
+// Items beyond this map that sit inside the user's collection radius (1 km, or more with Proximity Boost).
+function farItems(){
+  return S.items.filter(it => it.km && left(it)>0 && released(it) && it.km<=Rw.radiusKm() && it.id!==S.claim && matchesFilters(it))
+    .sort((a,b)=>a.km-b.km);
+}
+
+/* ---------- map drawing ---------- */
+function drawBase(){
+  let b='<rect x="1054" y="534" width="232" height="252" rx="18" fill="var(--park)"/>';
+  BUILDINGS.forEach(r=>{ b+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="8" fill="var(--block)"/>`; });
+  const water=`<path d="M-20 1190 C 300 1120 520 1260 800 1190 S 1300 1120 1640 1170" fill="none" stroke="var(--water)" stroke-width="46" stroke-linecap="round"/>`;
+  let roads='';
+  const H=[[300,12],[520,10],[800,20],[1080,12],[1300,10]], V=[[300,10],[560,12],[800,12],[1040,10],[1300,12]];
+  H.forEach(([y,w])=>{ roads+=`<line x1="-10" y1="${y}" x2="1610" y2="${y}" stroke="var(--roadc)" stroke-width="${w+4}"/>`; });
+  V.forEach(([x,w])=>{ roads+=`<line x1="${x}" y1="-10" x2="${x}" y2="1610" stroke="var(--roadc)" stroke-width="${w+4}"/>`; });
+  roads+=`<line x1="-10" y1="${dY(-10)}" x2="1130" y2="${dY(1130)}" stroke="var(--roadc)" stroke-width="18"/>`;
+  H.forEach(([y,w])=>{ roads+=`<line x1="-10" y1="${y}" x2="1610" y2="${y}" stroke="var(--road)" stroke-width="${w}"/>`; });
+  V.forEach(([x,w])=>{ roads+=`<line x1="${x}" y1="-10" x2="${x}" y2="1610" stroke="var(--road)" stroke-width="${w}"/>`; });
+  roads+=`<line x1="-10" y1="${dY(-10)}" x2="1130" y2="${dY(1130)}" stroke="var(--road)" stroke-width="14"/>`;
+  const lab=(t,x,y,r=0)=>`<text x="${x}" y="${y}" transform="rotate(${r} ${x} ${y})" font-family="Instrument Sans,sans-serif" font-size="11" font-weight="700" fill="#8795AD" text-anchor="middle" letter-spacing=".5">${t}</text>`;
+  const labels=lab('IDP ROAD',640,804,0)+lab('IDP ROAD',960,804,0)+lab('KENT LANE',804,640,-90)+lab('LIBRARY WALK',300,520,-90)+lab('BRIDGE ROAD',1040,1000,-90)+lab('ORCHARD CLOSE',1200,1084,0)+lab('GARDEN ROW',420,1084,0);
+  const park=`<text x="1170" y="665" font-family="Instrument Sans,sans-serif" font-size="12" font-weight="700" fill="#5E9A6F" text-anchor="middle">KENT PARK</text>`;
+  return `<svg class="base" width="1600" height="1600" viewBox="0 0 1600 1600"><rect width="1600" height="1600" fill="var(--land)"/>${b}${water}${roads}${labels}${park}</svg>`;
+}
+function pinSVG(cat, state){
+  const fill = state==='reserved' ? '#A5AEC2' : state==='mine' ? '#FFD23F' : state==='flag' ? '#D93D4E' : state==='far' ? '#7C3AED' : '#14213D';
+  const ring = state==='mine' ? '#14213D' : '#fff';
+  const glyph = state==='reserved' ? '#6E7893' : (state==='flag' ? '#D93D4E' : state==='far' ? '#7C3AED' : '#14213D');
+  return `<svg width="44" height="54" viewBox="0 0 44 54" aria-hidden="true"><path d="M22 52C22 52 4 33 4 21a18 18 0 0 1 36 0c0 12-18 31-18 31z" fill="${fill}" stroke="${ring}" stroke-width="3"/><circle cx="22" cy="21" r="12" fill="${state==='reserved'?'#E7EAF1':'#fff'}"/><g transform="translate(13 12) scale(.75)" fill="none" stroke="${glyph}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${ICON[cat]||ICON.Others}</g></svg>`;
+}
+const cone = a => `<svg class="cone" viewBox="0 0 68 68" style="transform:rotate(${a}deg)"><defs><radialGradient id="cg" cx="34" cy="34" r="34" gradientUnits="userSpaceOnUse"><stop offset=".15" stop-color="#2F6BFF" stop-opacity=".55"/><stop offset="1" stop-color="#2F6BFF" stop-opacity="0"/></radialGradient></defs><path d="M34 34 L12 2 A38 38 0 0 1 56 2 Z" fill="url(#cg)"/></svg>`;
+
+function renderMap(){
+  const w = $('#world');
+  if(!w.dataset.built){ w.innerHTML = drawBase()+'<svg class="over" id="over" width="1600" height="1600" viewBox="0 0 1600 1600"></svg><div id="pins"></div><div id="me"></div>'; w.dataset.built=1; }
+  // overlay: radius ring + route
+  let o='';
+  if(S.filters.prox){ const r=S.filters.prox/SC; o+=`<circle cx="${S.user.x}" cy="${S.user.y}" r="${r}" fill="rgba(255,210,63,.14)" stroke="#E8B800" stroke-width="2.5" stroke-dasharray="9 7"/>`; }
+  if(S.claim){ const it=item(S.claim); if(it && !it.km){ const pts=routePts(); const d=pts.map(p=>p.x+','+p.y).join(' '); o+=`<polyline points="${d}" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${d}" fill="none" stroke="#14213D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 11"/>`; } }
+  $('#over').innerHTML=o;
+  // pins
+  const boostPins = Rw.active('boost') ? farItems().filter(i=>i.x!==undefined) : [];
+  const vis=visibleItems().concat(boostPins);
+  let h='';
+  vis.forEach(it=>{
+    const nc = recentCancels(it).length; const st = it.km ? 'far' : it.mine ? 'mine' : (it.status==='reserved' ? 'reserved' : (cancelSev(it)==='red' ? 'flag' : 'open'));
+    const inQ = it.queue.includes('you') ? it.queue.indexOf('you')+1 : 0;
+    const cls = ['pin', S.sel===it.id?'sel':'', S.claim===it.id?'sel':'', S.justPublished===it.id?'pulse':''].join(' ');
+    const early=isEarly(it);
+    const tag = showWalkTag(it) ? pinTag(it) : null;
+    h+=`<button class="${cls}" style="left:${it.x}px;top:${it.y}px" data-act="pin" data-id="${it.id}" aria-label="${it.title.replace(/"/g,'&quot;')}, ${tag?tag.aria:fmtDist(dist(it))+' away'}${early?', early access':''}${it.status==='reserved'?', reserved':''}${nc?', '+nc+' recent cancellation'+(nc>1?'s':''):''}">${pinSVG(it.cat,st)}${it.mine?'<span class="tag">Yours</span>':''}${early?'<span class="eb">Early</span>':''}${tag?`<span class="wt" aria-hidden="true">${tag.html}</span>`:(it.km?`<span class="ft">${it.km.toFixed(1)} km</span>`:'')}${inQ?`<span class="qb">#${inQ}</span>`:''}${st==='flag'?`<span class="cb">${nc}</span>`:''}</button>`;
+  });
+  $('#pins').innerHTML=h;
+  placeMe();
+}
+function placeMe(){ const m=$('#me'); m.style.left=S.user.x+'px'; m.style.top=S.user.y+'px'; m.innerHTML=cone(S.heading)+'<div class="dot"></div>'; }
+function setWorld(anim){ const w=$('#world'); w.classList.toggle('anim',!!anim); w.style.transform=`translate(${S.pan.x}px,${S.pan.y}px)`; }
+function clampPan(p){ return {x:Math.min(0,Math.max(390-1600,p.x)), y:Math.min(0,Math.max(844-1600,p.y))}; }
+function focusAt(wx,wy,sx,sy,anim=true){ S.pan=clampPan({x:sx-wx,y:sy-wy}); setWorld(anim); }
+
+/* ---------- route / walking ---------- */
+let raf=null;
+function pathLen(pts){ let l=0; for(let i=1;i<pts.length;i++) l+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); return l; }
+function pointAt(w,s){
+  const p=w.path; let rest=Math.max(0,Math.min(w.len,s));
+  for(let i=1;i<p.length;i++){ const d=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);
+    if(rest<=d||i===p.length-1){ const f=d?Math.min(1,rest/d):1; return {x:p[i-1].x+(p[i].x-p[i-1].x)*f, y:p[i-1].y+(p[i].y-p[i-1].y)*f, ang:Math.atan2(p[i].x-p[i-1].x,-(p[i].y-p[i-1].y))*180/Math.PI, i}; }
+    rest-=d; }
+  return {x:p[0].x,y:p[0].y,ang:0,i:1};
+}
+function routePts(){
+  const it=item(S.claim); if(!it||it.km) return [];
+  const w=S.walk; if(!w) return buildRoute(S.user,{x:it.x,y:it.y});
+  const q=pointAt(w,w.s); return [{x:q.x,y:q.y}, ...w.path.slice(q.i)];
+}
+function walkLeftPx(){ const w=S.walk; return w ? Math.max(0,w.len-w.s) : (item(S.claim)? pathLen(routePts()) : 0); }
+function startWalk(){
+  stopWalk();
+  const it=item(S.claim); if(!it||it.km) return;
+  const path=buildRoute(S.user,{x:it.x,y:it.y}), len=pathLen(path);
+  S.walk={path,len,s:0,speed:Math.max(3,len/18),hold:3};   // stands still for 3 s before setting off
+        // prototype pace: about 18 seconds door to door
+  if(path.length>1) S.heading=pointAt(S.walk,0).ang;
+  let last=performance.now();
+  const step=now=>{
+    if(!S.walk||!S.claim) return;
+    const dt=Math.min(.1,(now-last)/1000); last=now;
+    if(S.walk.hold>0){ S.walk.hold-=dt; raf=requestAnimationFrame(step); return; }
+    S.walk.s=Math.min(S.walk.len,S.walk.s+S.walk.speed*dt);
+    const q=pointAt(S.walk,S.walk.s); S.user={x:q.x,y:q.y}; if(S.walk.s<S.walk.len) S.heading=q.ang;
+    placeMe(); updateRoute(); updateNavText();
+    if(S.walk.s<S.walk.len) raf=requestAnimationFrame(step);
+  };
+  raf=requestAnimationFrame(step);
+}
+function stopWalk(){ if(raf) cancelAnimationFrame(raf); raf=null; S.walk=null; }
+function updateRoute(){
+  const it=item(S.claim); if(!it) return;
+  const pts=routePts(); const d=pts.map(p=>p.x+','+p.y).join(' ');
+  const el=$('#over'); const pl=el.querySelectorAll('polyline'); pl.forEach(p=>p.setAttribute('points',d));
+}
+function navDistText(){ const ci=item(S.claim); if(ci&&ci.km) return `${ci.km.toFixed(1)} km (about ${transitMin(ci.km)} min by bus or MRT)`; const m=Math.round(walkLeftPx()*SC); return m<=8 ? 'You have arrived' : fmtDist(m)+' ('+walkMin(m)+' min walk)'; }
+function updateNavText(){ const dd=$('#navDist'); if(dd) dd.textContent=navDistText(); }
+
+/* ---------- renderers ---------- */
+function photosHTML(it){
+  return `<div class="photos">${art(it.art,false) ? `<div>${art(it.art,false)}</div><div>${art(it.art,true)}</div>` : ''}${it.media&&it.media.length?'':''}</div>`;
+}
+function mediaTile(m, cls){
+  if(m.type==='photo'||m.type==='file'){ return m.url ? `<img src="${m.url}" alt="" style="width:100%;height:100%;object-fit:cover">` : art(m.art, m.flip); }
+  const inner = m.url ? `<video src="${m.url}" muted playsinline style="width:100%;height:100%;object-fit:cover"></video>` : art(m.art, true);
+  return `${inner}<div class="play">${ic('play',28)}</div>`;
+}
+function itemMedia(it){
+  if(it.media && it.media.length){ return `<div class="photos">${it.media.slice(0,2).map(m=>`<div>${mediaTile(m)}</div>`).join('')}</div>`; }
+  return `<div class="photos"><div>${art(it.art,false)}</div><div>${art(it.art,true)}</div></div>`;
+}
+function routeM(it){ if(it.km) return Math.round(it.km*1000); return Math.round(pathLen(buildRoute(S.user,{x:it.x,y:it.y}))*SC); }
+function approxText(it){ if(it.km) return `About ${it.km.toFixed(1)} km away, ~${transitMin(it.km)} min by bus or MRT`; const m=routeM(it); return `About ${fmtDist(approxM(m))} away, ${walkMin(m)} min walk`; }
+function approxM(m){ return m<100?Math.round(m/10)*10:Math.round(m/50)*50; }
+function renderSheet(){
+  const sh=$('#sheet'); const it=S.sel&&!S.detail ? item(S.sel) : null;
+  const open = !!it && !S.camera && !S.form;
+  if(it){
+    const q = it.queue.indexOf('you')+1;
+    const reserved = it.status==='reserved' && !it.mine;
+    let foot;
+    if(it.mine) foot=`<button class="cta ghost" data-act="remove" data-id="${it.id}">Remove my listing</button>`;
+    else if(reserved) foot=`<div class="rsv"><p><b>${q?`You're #${q} in the queue`:'Already reserved'}</b>${it.by==='you'?'You reserved this item':'Someone else is collecting this item'}</p><button class="warnbtn" data-act="queue" aria-label="Reserved. See queue options">${ic('alert',28)}</button></div>`;
+    else foot=`<button class="cta" data-act="claim" data-id="${it.id}">Claim This ${ic('check',22,3)}</button>`;
+    sh.innerHTML=`<div class="grab" data-act="expand" aria-label="Open full details"></div><button class="xbtn" data-act="closeSel" aria-label="Close">${ic('x',18)}</button>
+      ${itemMedia(it)}
+      <h2 class="ttl">${it.title}</h2>
+      <div class="meta"><div><span class="cat">${ic(it.cat,16)}${it.cat}</span>
+        <div class="addr">${ic('pin',16)}<span>${addrLine(it)}</span></div></div>
+        <div class="tleft"><small>Listing ends in</small><span class="timer" data-timer="${it.id}">${fmtT(left(it))}</span></div></div>
+      ${earlyBanner(it)}${wantsLock(it)?lockRow():''}
+      ${(!reserved&&!it.mine&&recentCancels(it).length)?`<button class="cstrip ${cancelSev(it)}" data-act="reasons"><span class="ci">${ic('alert',20)}</span><span class="ct"><b>${cancelTitle(it)}</b><small>Tap to see why</small></span>${ic('right',20)}</button>`:''}
+      <div style="margin-top:10px"><button class="more" data-act="expand">Full details</button></div>
+      ${foot}`;
+  }
+  sh.classList.toggle('open', open);
+  if(!open && !it) { /* keep content until slide-out finishes */ }
+}
+function renderDetail(){
+  const d=$('#detail'); const it=S.sel&&S.detail ? item(S.sel) : null;
+  if(it){
+    const reserved = it.status==='reserved' && !it.mine; const q=it.queue.indexOf('you')+1;
+    let cta;
+    if(it.mine) cta=`<button class="cta ghost" data-act="remove" data-id="${it.id}">Remove my listing</button>`;
+    else if(reserved) cta = q ? `<button class="cta ghost" data-act="queue">You're #${q} in the queue</button>` : `<button class="cta" data-act="queue">Get next in line</button>`;
+    else cta=`<button class="cta" data-act="claim" data-id="${it.id}">Claim This ${ic('check',22,3)}</button>`;
+    d.innerHTML=`<button class="xbtn" data-act="closeDetail" aria-label="Close details">${ic('x',18)}</button><div class="dscroll">
+      ${itemMedia(it)}
+      <h2 class="ttl">${it.title}</h2>
+      <div class="meta"><div><span class="cat">${ic(it.cat,16)}${it.cat}</span><div class="addr">${ic('pin',16)}<span>${addrLine(it)}</span></div></div>
+        <div class="tleft"><small>Listing ends in</small><span class="timer" data-timer="${it.id}">${fmtT(left(it))}</span></div></div>
+      ${earlyBanner(it)}${wantsLock(it)?lockRow():''}
+      ${reserved?`<div class="dsec"><div class="banner">${ic('users',20)}<span>${it.by==='you'?'You have reserved this item.':'Reserved by another claimer.'} ${it.queue.length?it.queue.length+' waiting in the queue.':'Nobody is waiting yet.'}</span></div></div>`:''}
+      ${it.mine?`<div class="dsec"><h4>Details</h4><span class="pickup">Pickup: ${it.instr}</span></div>`:''}
+      <div class="dsec"><h4>Description</h4><div class="box">${it.desc}
+        ${recentCancels(it).length?`<div class="warnbox ${cancelSev(it)}"><b>${ic('alert',18)}${cancelTitle(it)}</b><div class="wnote">${ic('clock',15)}<span>${NOTE}</span></div>${cancelListHTML(it)}</div>`:''}</div></div></div>
+      <div class="stick">${cta}</div>`;
+  }
+  d.classList.toggle('open', !!it && !S.camera && !S.form);
+}
+function renderNav(){
+  const n=$('#nav'); const it=S.claim?item(S.claim):null;
+  const hl = S.justClaimed ? 'flashrow' : '';
+  if(it){
+    n.innerHTML=`<div class="top"><div class="nm">${it.title}</div><button class="cancelbtn" data-act="cancelPick">Cancel<br>Pickup</button></div>
+      <dl class="rows"><dt>Address</dt><dd class="${hl}">${it.addr}<span class="unl">${ic('unlock',11,2.6)}Unlocked</span></dd><dt>Distance</dt><dd id="navDist">${navDistText()}</dd><dt>Collect within</dt><dd><span data-hold="${it.id}">${fmtT((it.holdExp||0)-Date.now())}</span></dd><dt>Pickup</dt><dd class="${hl}">${it.instr}</dd></dl>
+      <div class="askrow"><b>Collected?</b></div>
+      <div class="slider" data-done="collect"><div class="fill"></div><div class="lbl">Slide to Confirm</div><div class="knob" tabindex="0" role="button" aria-label="Slide to confirm collection">${ic('chev2',24,2.6)}</div></div>`;
+    initSliders(n);
+  }
+  n.classList.toggle('open', !!it && !S.camera && !S.form && !S.collected);
+}
+function renderDone(){
+  const d=$('#done');
+  if(S.collected){ d.innerHTML=`<div class="tick">${ic('check',36,3.2)}</div><h3>Item collected!</h3><p>${S.collected} is off the map. Nice find.</p><button class="cta" data-act="doneOK" style="margin-top:14px">Back to the map</button>`; }
+  d.classList.toggle('open', !!S.collected && !S.camera && !S.form);
+}
+function renderTop(){
+  const f=S.filters; const act=[];
+  if(f.cat!=='All') act.push(['cat',f.cat]);
+  if(f.prox) act.push(['prox','Within '+fmtDist(f.prox)]);
+  if(f.time) act.push(['time', f.time==='just'?'Just listed':'Ending soon']);
+  const far=farItems();
+  $('#chips').innerHTML = act.map(([k,t])=>`<span class="chip">${t}<button data-act="clearOne" data-k="${k}" aria-label="Remove filter ${t}" style="display:grid;place-items:center;width:22px;height:22px">${ic('x',14,2.6)}</button></span>`).join('')
+    + (far.length&&Rw.active('boost')?`<button class="chip farchip" data-act="far">${ic('radar',14)}${far.length} further away</button>`:'');
+  $('#tokBtn').innerHTML = `<span class="coin"></span>${Rw.balance()}`;
+  const pu=[];
+  if(Rw.active('early')) pu.push(`<button class="pup" data-act="hub">${ic('bird',14)}Early Bird <b data-until="${Rw.until('early')}" data-clock="rw">${fmtT(Rw.leftMs('early'))}</b></button>`);
+  if(Rw.active('boost')) pu.push(`<button class="pup" data-act="hub">${ic('radar',14)}Radius expanded for <b data-until="${Rw.until('boost')}" data-clock="rw" data-fmt="hrs">${fmtHrs(Rw.leftMs('boost'))}</b></button>`);
+  $('#pups').innerHTML = pu.join('');
+  const gb=$('#gameBtn'); gb.innerHTML = ic('game',24)+(Rw.canPlay()||(WS.st&&!WS.st.over)?'<i class="badge" title="A game is ready to play"></i>':'');
+  gb.style.display = mapIdle() ? 'grid' : 'none';
+  $('#menuBtn').innerHTML = ic('funnel',22)+(act.length?'<i class="badge"></i>':'');
+  $('#camBtn').innerHTML = ic('camera',22);
+  $('#top').style.display = (S.camera||S.form||S.detail||S.hub||S.game)?'none':'';
+  const rc=$('#recenter'); rc.innerHTML=ic('locate',22);
+  rc.style.display = (S.camera||S.form||S.detail||S.hub||S.game)?'none':'grid';
+  rc.style.bottom = S.claim&&!S.collected ? '338px' : (S.sel&&!S.detail ? '430px' : (S.collected?'300px':'40px'));
+}
+function renderLegend(){
+  const mp=(f,r)=>`<svg width="13" height="16" viewBox="0 0 44 54" aria-hidden="true"><path d="M22 52C22 52 4 33 4 21a18 18 0 0 1 36 0c0 12-18 31-18 31z" fill="${f}" stroke="${r||'#fff'}" stroke-width="5"/><circle cx="22" cy="21" r="9" fill="#fff"/></svg>`;
+  const L=$('#legend'); if(!L) return;
+  L.innerHTML=`<h6>Pin guide</h6><span>${mp('#14213D')}Available</span><span>${mp('#A5AEC2')}Reserved</span><span>${mp('#D93D4E')}Recently cancelled</span><span>${mp('#FFD23F','#14213D')}Your listing</span>${Rw.active('boost')?`<span style="grid-column:1/-1">${mp('#7C3AED')}Further away (Proximity Boost)</span>`:''}${Rw.active('early')?`<span style="grid-column:1/-1">${mp('#14213D')}<b style="background:var(--snap);border-radius:6px;padding:0 5px;font-size:10px">Early</b> Early access (Early Bird)</span>`:''}`;
+  L.style.display = mapIdle() ? 'grid' : 'none';
+}
+function mapIdle(){ return !(S.sel||S.claim||S.collected||S.filterOpen||S.modal||S.camera||S.form||S.detail||S.hub||S.game||S.farOpen); }
+function renderFilter(){
+  const f=S.filters;
+  const cats=['All',...CATS].map(c=>`<button class="opt ${f.cat===c?'on':''}" data-act="fcat" data-v="${c}">${ic(c,17)}${c}${f.cat===c?ic('check',16,3):''}</button>`).join('');
+  const prox=[100,300,500,1000].map(p=>`<button class="opt ${f.prox===p?'on':''}" data-act="fprox" data-v="${p}">${fmtDist(p)}${f.prox===p?ic('check',16,3):''}</button>`).join('');
+  const time=[['just','Just listed'],['soon','Ending soon']].map(([k,t])=>`<button class="opt ${f.time===k?'on':''}" data-act="ftime" data-v="${k}">${t}${f.time===k?ic('check',16,3):''}</button>`).join('');
+  $('#fpanel').innerHTML=`<div class="fgrid"><div><h5>Item type</h5>${cats}</div><div class="col2"><h5>Proximity</h5>${prox}<hr><h5>Time</h5>${time}</div></div>
+    <div class="ffoot"><span>${visibleItems().length} of ${S.items.filter(i=>!i.km&&left(i)>0&&released(i)).length} items on the map</span><button data-act="fclear">Clear all</button></div>`;
+  $('#fpanel').classList.toggle('open',S.filterOpen); $('#scrim').classList.toggle('open',S.filterOpen);
+}
+function renderHub(){
+  const hb=$('#hub');
+  if(S.hub){
+    const bal=Rw.balance();
+    const puCard=k=>{ const P=POWERUPS[k], on=Rw.active(k), busy=S.puBusy===k, short=bal<RCFG.COST;
+      return `<div class="pcard"><div class="ph"><div class="pic">${ic(P.icon,22)}</div><div style="flex:1"><h4>${P.name}</h4><p>${P.blurb()}</p></div><span class="cost"><span class="coin"></span>${RCFG.COST}</span></div>
+        ${on ? `<div class="pact"><span>${ic('check',16,3)} Active${k==='boost'?` · ${Rw.radiusKm()} km radius`:''}</span><span>Ends in <b data-until="${Rw.until(k)}" data-clock="rw">${fmtT(Rw.leftMs(k))}</b></span></div>`
+             : `<button class="pbtn ${busy?'busy':''} ${short?'dis':''}" data-act="puAct" data-k="${k}">${busy?`<span class="spin"></span>Switching on…`:`Switch on for 48 hours`}</button>${short?`<p class="hnote" style="margin-top:6px">You need ${RCFG.COST} tokens. You have ${bal}.</p>`:''}`}
+      </div>`; };
+    const led=Rw.ledger().slice(0,6);
+    hb.innerHTML=`<div class="hscroll">
+      <div class="hhd"><button class="back" data-act="hubX" aria-label="Back to the map">${ic('left',22)}</button><h2>Tokens &amp; power-ups</h2></div>
+      <div class="balcard"><span class="coin big"></span><div><b>${bal}<span>token${bal===1?'':'s'}</span></b><small>Earn tokens with the game button on the map. Spend ${RCFG.COST} tokens to switch on a power-up for 48 hours.</small></div></div>
+      <div class="hsec">Power-ups</div>${puCard('early')}${puCard('boost')}
+      <div class="hsec">Recent activity</div>${led.length?`<ul class="ledger">${led.map(l=>`<li><span>${esc(l.why)}<small>${fmtClock(l.ts)}</small></span><span class="${l.d>0?'p':'m'}">${l.d>0?'+':''}${l.d}</span></li>`).join('')}</ul>`:`<p class="hnote">No tokens earned or spent yet.</p>`}
+      <p class="hnote">Power-ups end on their own after 48 hours. Each one has its own timer.</p></div>`;
+  }
+  hb.classList.toggle('open', !!S.hub);
+}
+function renderGame(){
+  const g=$('#game');
+  if(S.game){
+    const s=WS.st, scroll=g.querySelector('.gscroll'), top=scroll?scroll.scrollTop:0; let h;
+    if(s && !s.over){
+      const tok=Math.floor(s.score/RCFG.PTS_PER_TOKEN), into=s.score%RCFG.PTS_PER_TOKEN;
+      h=`<div class="gscroll"><div class="ghd"><button class="glass" data-act="gEnd" aria-label="End game">${ic('x',22)}</button>
+          <div class="gstat"><small>Time left</small><b id="gTime">${fmtT(s.end-Date.now()).slice(2)}</b></div>
+          <div class="gstat"><small>Level</small><b>${s.level}</b></div>
+          <div class="gstat"><small>This level</small><b>${s.busy?'+'+fmtN(s.lvPts):'0'}</b></div>
+          <div class="gstat"><small>Session</small><b id="gScore">${fmtN(s.score)}</b></div></div>
+        <div class="gbar"><i style="width:${into/RCFG.PTS_PER_TOKEN*100}%"></i></div><p class="gnext">${tok} token${tok===1?'':'s'} so far · ${fmtN(RCFG.PTS_PER_TOKEN-into)} more points to the next</p>
+        <div class="glvl"><span>${s.n} colours · worth up to ${fmtN(WS.maxFor(s.n))}</span><span>${s.moves} moves · target ${WS.par(s.n)}</span></div>
+        <div class="tubes">${s.tubes.map((t,i)=>tubeHTML(t,i,[s.sel===i?'sel':'',WS.complete(t)?'full':''].join(' '))).join('')}</div>
+        <div class="gmsg" aria-live="polite">${s.msg||''}</div>
+        <div class="gctl"><button data-act="gRestart">Restart puzzle</button><button data-act="gSkip">Skip puzzle</button></div></div>
+        ${S.gConfirm?`<div class="gconf"><div class="mcard"><h3>End the game now?</h3><p>You'll keep the ${fmtN(s.score)} points you have, which is ${tok} token${tok===1?'':'s'}. You can't play again for 24 hours from when this game started.</p><button class="cta" data-act="gEndYes">End game</button><button class="cta ghost" data-act="gEndNo">Keep playing</button></div></div>`:''}`;
+    } else if(s && s.over){
+      const r=s.res||{};
+      h=`<div class="gscroll"><div class="ghd"><h2>${s.timeUp?"Time's up!":'Game over'}</h2></div>
+        <div class="gres"><small>Final score</small><b>${fmtN(s.score)}</b></div>
+        <div class="gearn" style="justify-content:space-around;text-align:center"><div><small>Levels completed</small><b>${s.solved||0}</b></div><div><small>Tokens earned</small><b>${r.ok?r.tokens:0}</b></div></div>
+        ${r.ok?`<div class="gearn"><span class="coin big"></span><div><b>+${r.tokens} token${r.tokens===1?'':'s'}</b><small>${r.tokens?`Balance: ${r.balance} tokens. Leftover points (${fmtN(s.score%RCFG.PTS_PER_TOKEN)}) don't carry over.`:`Reach ${fmtN(RCFG.PTS_PER_TOKEN)} points in one game to earn a token. Points don't carry over to the next game.`}</small></div></div>`:`<div class="gwarn">${r.msg||'No tokens were added.'}</div>`}
+        <p class="gcd">Next game ${fmtClock(Rw.nextPlayAt())}<br>in <b data-until="${Rw.nextPlayAt()}" data-clock="rw">${fmtT(Rw.nextPlayAt()-Rw.now())}</b></p>
+        <button class="cta" data-act="gClose" style="margin-top:22px">Back to the map</button></div>`;
+    } else if(!Rw.canPlay()){
+      h=`<div class="gscroll"><div class="ghd"><button class="glass" data-act="gClose" aria-label="Back">${ic('left',22)}</button><h2>Water Sort</h2></div>
+        <div class="gdemo">${[[0,1,0,1],[1,0,1,0],[],[]].map(t=>tubeHTML(t,null)).join('')}</div>
+        <div class="gres"><small>You've already played today</small></div>
+        <p class="gcd">Next game ${fmtClock(Rw.nextPlayAt())}<br>in <b data-until="${Rw.nextPlayAt()}" data-clock="rw">${fmtT(Rw.nextPlayAt()-Rw.now())}</b></p>
+        <button class="cta" data-act="gClose" style="margin-top:22px">Back to the map</button></div>`;
+    } else {
+      h=`<div class="gscroll"><div class="ghd"><button class="glass" data-act="gClose" aria-label="Back">${ic('left',22)}</button><h2>Water Sort</h2></div>
+        <div class="gdemo">${[[0,1,2,0],[2,1,0,1],[1,2,0,2],[]].map(t=>tubeHTML(t,null)).join('')}</div>
+        <ul class="grules">
+          <li>Tap a tube, then tap another tube to pour. You can pour onto the same colour or into an empty tube.</li>
+          <li>Solve a puzzle by making every tube hold one colour. You have <b>3 minutes</b> to solve as many as you can.</li>
+          <li>Points are only given when you solve a puzzle: ${fmtN(RCFG.PTS_PER_COLOUR)} per colour (harder puzzles have more colours), +${fmtN(RCFG.COMPLETE_BONUS)} for finishing, and up to +${fmtN(RCFG.EFFICIENCY_MAX)} for using few moves. Skipped or unfinished puzzles score nothing.</li>
+          <li><b>1 token for every ${fmtN(RCFG.PTS_PER_TOKEN)} points</b> in one game. Leftover points don't carry over to your next game.</li></ul>
+        <div class="gwarn">You can play one game every 24 hours, counted from when you press Start. Leaving or reloading the page mid-game ends it with no tokens.</div>
+        <button class="cta" data-act="gStart" style="margin-top:16px">Start game</button></div>`;
+    }
+    g.innerHTML=h; const ns=g.querySelector('.gscroll'); if(ns&&top) ns.scrollTop=top;
+  }
+  g.classList.toggle('open', !!S.game);
+}
+function renderFar(){
+  const p=$('#farp');
+  if(S.farOpen){
+    const list=farItems(), r=Rw.radiusKm(), boost=Rw.active('boost');
+    const out=S.items.filter(it=>it.km&&left(it)>0&&released(it)&&it.km>r&&matchesFilters(it)).sort((a,b)=>a.km-b.km);
+    const row=(it,o)=>`<button class="frow ${o?'out':''}" ${o?'data-act="hub"':`data-act="pin" data-id="${it.id}"`}><div class="fth">${art(it.art,false)}</div><div><b>${it.title}</b><small>${it.km.toFixed(1)} km away · ~${transitMin(it.km)} min by bus or MRT${o?' · outside your radius':''}</small></div>${ic(o?'lock':'right',18)}</button>`;
+    p.innerHTML=`<div class="grab" aria-hidden="true"></div><button class="xbtn" data-act="farX" aria-label="Close">${ic('x',18)}</button>
+      <h2 class="ttl" style="font-size:23px">Further away</h2>
+      <p class="hnote" style="margin-top:4px">Items beyond this map but inside your <b>${r} km</b> collection radius.${boost?' Proximity Boost is on.':` Proximity Boost extends it to ${RCFG.BASE_RADIUS_KM+RCFG.BOOST_EXTRA_KM} km.`}</p>
+      <div class="flist">${list.map(it=>row(it,false)).join('')||'<p class="hnote">Nothing further away right now.</p>'}${out.map(it=>row(it,true)).join('')}</div>`;
+  }
+  p.classList.toggle('open', !!S.farOpen && !S.camera && !S.form);
+}
+function cancelReady(){ return S.cancelReason==='Others' ? !!(S.cancelText||'').trim() : !!S.cancelReason; }
+function renderModal(){
+  const m=$('#modal'); let h='';
+  if(S.modal==='queue'){
+    const it=item(S.sel); const q=it?it.queue.indexOf('you')+1:0;
+    h = q ? `<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><div class="mic">${ic('users',24)}</div><h3>You're #${q} in the queue</h3><p>If the current claimer cancels or runs out of time, the item passes to you and navigation starts straight away.</p><button class="cta" data-act="leaveQ">Leave the queue</button><button class="cta ghost" data-act="modalX">Close</button></div>`
+      : `<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><div class="mic">${ic('alert',24)}</div><h3>Item has already been reserved</h3><p>Join the queue and you're next in line if the current claimer cancels or runs out of time. No messaging needed.</p><button class="cta" data-act="joinQ">Get next in line</button><button class="cta ghost" data-act="modalX">Cancel</button></div>`;
+  } else if(S.modal==='cancel'){
+    const r=S.cancelReason;
+    h=`<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><h3>Why are you cancelling?</h3><p>Your reason helps the next claimer know what to expect.</p>
+      ${['Product does not match listing','Product is not there','No longer suitable','Others'].map(t=>`<button class="radio ${r===t?'on':''}" data-act="reason" data-v="${t}" aria-pressed="${r===t}"><i></i>${t}</button>`).join('')}
+      ${r==='Others'?`<div class="fld" style="margin:0 0 8px"><label for="cancelText" class="sr">Tell us why you are cancelling</label><textarea class="inp" id="cancelText" maxlength="200" placeholder="Tell the next claimer what happened">${esc(S.cancelText||'')}</textarea></div>`:''}
+      <div class="slider ${cancelReady()?'':'off'}" id="cancelSlider" data-done="doCancel" style="margin-top:8px"><div class="fill"></div><div class="lbl">Slide to Confirm</div><div class="knob" tabindex="0" role="button" aria-label="Slide to confirm cancellation">${ic('chev2',24,2.6)}</div></div></div>`;
+  } else if(S.modal==='reasons'){
+    const it=item(S.sel);
+    h=`<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><div class="mic" style="${it&&cancelSev(it)==='red'?'background:var(--red-l);color:var(--danger)':''}">${ic('alert',24)}</div><h3>Why people cancelled</h3>
+      <div class="wnote" style="margin:-4px 0 12px">${ic('clock',15)}<span>${NOTE}</span></div>${it?cancelListHTML(it,'scroll'):''}
+      <button class="cta ghost" data-act="modalX">Close</button></div>`;
+  } else if(S.modal==='played'){
+    const nx=Rw.nextPlayAt();
+    h=`<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><div class="mic" style="background:#DBEAFE;color:#1D4ED8">${ic('game',24)}</div><h3>You have already played today</h3>
+      <p>Next game in <b data-until="${nx}" data-clock="rw" data-fmt="hrs">${fmtHrs(nx-Rw.now())}</b>, at ${fmtClock(nx)}.</p>
+      <button class="cta" data-act="modalX">OK</button></div>`;
+  } else if(S.modal==='addrLock'){
+    const it=item(S.sel);
+    h=`<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><div class="mic lockic">${ic('lock',24)}</div><h3>Address shown after you claim</h3>
+      <p>To keep givers safe, the exact address and pickup note appear only once you claim this item. For now you can see how far it is: <b>${it?approxText(it):''}</b>.</p>
+      <button class="cta" data-act="lockClaim">Claim This ${ic('check',22,3)}</button>
+      ${S.lockFrom==='full'?`<button class="cta ghost" data-act="lockFull">See other details</button>`:''}
+      <button class="cta ghost" data-act="modalX">Go back</button></div>`;
+  } else if(S.modal==='duration'){
+    const H=S.dur.h, M=S.dur.m, mins=[0,15,30,45], mi=mins.indexOf(M);
+    const hp=Math.max(0,H-1), hn=Math.min(MAX_DUR_H,H+1);
+    const atMax=H>=MAX_DUR_H, mp=atMax?'':mins[(mi+3)%4], mn=atMax?'':mins[(mi+1)%4];   // at 24 h only 00 mins is allowed
+    const dim=(v,u,act)=>`<div class="v dim" data-act="${act}" role="button">${v}</div>`;
+    h=`<div class="mcard"><button class="xbtn" data-act="modalX" aria-label="Close">${ic('x',18)}</button><h3>How long to list for?</h3><p>Up to 24 hours. The listing disappears from the map when time runs out.</p>
+      <div class="pick" id="pick">
+        <div class="pcol" data-col="h"><button class="step" data-act="hUp" aria-label="More hours">${ic('up',20)}</button>${dim(H>0?H-1:'',null,'hUp')}<div class="v cur">${H}<small>${H===1?'hour':'hours'}</small></div>${dim(H<MAX_DUR_H?H+1:'',null,'hDn')}<button class="step" data-act="hDn" aria-label="Fewer hours">${ic('down',20)}</button></div>
+        <div class="pcol" data-col="m"><button class="step" data-act="mDn" aria-label="Fewer minutes">${ic('up',20)}</button>${dim(mp,null,'mDn')}<div class="v cur">${String(M).padStart(2,'0')}<small>mins</small></div>${dim(mn===''?'':String(mn).padStart(2,'0'),null,'mUp')}<button class="step" data-act="mUp" aria-label="More minutes">${ic('down',20)}</button></div>
+      </div>
+      <button class="cta" data-act="durOK">${S.durFrom==='list'?'Set time and list item':'Set time'} ${ic('check',22,3)}</button></div>`;
+  }
+  if(h) m.innerHTML=h;
+  m.classList.toggle('open', !!S.modal);
+  if(S.modal) initSliders(m);
+}
+
+/* ---------- camera ---------- */
+function newDraft(){ return {media:[], title:'', cat:'', desc:'', a1:'', a2:'', unit:'', postal:'', instr:''}; }
+function renderCamera(){
+  const c=$('#cam'); const sub=ART_ORDER[S.camSub%ART_ORDER.length]; const flip=!!(S.draft&&S.draft.media.length%2===1);
+  const zs=[0.5,1,2,4,8], zf={0.5:.66,1:1,2:1.55,4:2.3,8:3.2};
+  c.innerHTML=`<div class="vfwrap" id="vfwrap" data-act="focusTap">
+      <div class="vfz" style="transform:scale(${zf[S.zoom]})"><svg viewBox="-48 -94 216 288" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-label="Camera view of the item on a table">${sceneInner(sub,flip)}</svg></div>
+      ${S.torch?'<div class="torchfx"></div>':''}
+      <div class="fsq" id="fsq"></div>
+      <div class="zoom">${zs.map(z=>`<button class="${S.zoom===z?'on':''}" data-act="zoom" data-v="${z}">${z}x</button>`).join('')}</div>
+    </div>
+    <div class="hdr"><button class="glass" data-act="camBack" aria-label="Back">${ic('left',24)}</button>
+      <button class="glass ${S.torch?'on':''}" data-act="torch" aria-label="Flashlight" aria-pressed="${S.torch}">${ic('zap',22)}</button>
+      <button class="glass" data-act="camInfo" aria-label="Photo tips">${ic('info',22)}</button></div>
+    <div class="recdot ${S.rec?'on':''}" id="recdot"><span><i></i><b id="rect">0:00</b></span></div>
+    <div class="modes"><button class="${S.mode==='video'?'on':''}" data-act="mode" data-v="video">VIDEO</button><button class="${S.mode==='photo'?'on':''}" data-act="mode" data-v="photo">PHOTO</button></div>
+    <div class="ctrl"><button class="gal" data-act="gallery" aria-label="Choose from gallery">${ic('image',22)}<span>Gallery</span></button>
+      <button class="shutter ${S.mode==='video'?'vid':''} ${S.rec?'rec':''}" data-act="shutter" aria-label="${S.mode==='video'?(S.rec?'Stop recording':'Start recording'):'Take photo'}"><i></i></button>
+      <button class="glass" data-act="flip" aria-label="Flip camera" style="width:56px;height:56px">${ic('flip',24)}</button></div>
+    <div class="flash" id="flash"></div>`;
+  c.classList.toggle('open', S.camera);
+  $('#status').classList.toggle('light', S.camera);
+  $('#homebar').classList.toggle('light', S.camera);
+}
+
+/* ---------- form ---------- */
+function renderForm(){
+  const f=$('#form'); const d=S.draft;
+  if(!d){ f.classList.remove('open'); return; }
+  // keep the scroll position when the open form re-renders (e.g. after the time pop-up), in every version
+  const prevScroll = f.classList.contains('open') && f.querySelector('.fscroll') ? f.querySelector('.fscroll').scrollTop : 0;
+  const media=d.media.map((m,i)=>`<div><div class="mt">${mediaTile(m)}<button class="rm" data-act="rmMedia" data-i="${i}" aria-label="Remove ${m.type} ${i+1}">${ic('x',13,3)}</button></div><div class="mcap">${m.type==='video'?'Video':'Photo'} ${i+1}</div></div>`).join('');
+  const fld=(k,lab,opt,ph,msg,extra='')=>`<div class="fld ${S.errs&&S.errs[k]?'err':''}" data-f="${k}"><label for="f_${k}">${lab}${opt?` <em>(optional)</em>`:''}</label>${k==='desc'||k==='instr'?`<textarea class="inp" id="f_${k}" data-k="${k}" placeholder="${ph}">${d[k]}</textarea>`:`<input class="inp" id="f_${k}" data-k="${k}" value="${d[k].replace(/"/g,'&quot;')}" placeholder="${ph}" ${extra}>`}<div class="emsg">${msg}</div></div>`;
+  const dur = S.durSet ? `${S.dur.h}h ${S.dur.m}m` : 'Timer';
+  f.innerHTML=`<button class="back" data-act="formBack" aria-label="Back to camera" style="position:absolute;top:58px;left:20px;z-index:3">${ic('left',22)}</button>
+    <div class="fscroll"><div style="height:46px"></div>
+    <div class="media">${media}<div><button class="addm" data-act="addMore" aria-label="Add more photos or videos">${ic('plus',28)}</button><div class="mcap">Add more</div></div></div>
+    <div class="emsg" id="mediaErr" style="${S.errs&&S.errs.media?'display:block':''}">Add at least one photo or video.</div>
+    <div class="fld ${S.errs&&S.errs.title?'err':''}" data-f="title"><label for="f_title">Title</label><input class="inp" id="f_title" data-k="title" value="${d.title.replace(/"/g,'&quot;')}" placeholder="e.g. Coffee Table"><div class="emsg">Give your item a title.</div></div>
+    <div class="fld ${S.errs&&S.errs.cat?'err':''}" data-f="cat"><label for="f_cat">Type of item</label><select class="inp" id="f_cat" data-k="cat"><option value="">Choose a type</option>${CATS.map(c=>`<option ${d.cat===c?'selected':''}>${c}</option>`).join('')}</select><div class="emsg">Choose a type of item.</div></div>
+    ${fld('desc','Description',true,'Condition, size, anything a claimer should know','')}
+    <div class="fsec">Location</div>
+    ${fld('a1','Address line 1',false,'e.g. 123 IDP Road','Enter the pickup address.')}
+    ${fld('a2','Address line 2',true,'','')}
+    <div class="two">${fld('unit','Unit number',true,'#06-12','')}${fld('postal','Postal code',false,'123456','Enter a 6-digit postal code.','inputmode="numeric" maxlength="7"')}</div>
+    ${fld('instr','Pick up instructions',false,'Where exactly should the claimer go? There is no chat in SnapGive, so be clear.','Add pick up instructions so claimers can collect without messaging you.')}
+    </div><div class="fbar"><button class="cta" data-act="list">List Your Item!</button><button class="timerbtn" data-act="timer" aria-label="Set listing time"><span>${ic('timer',24)}</span><small>${dur}</small></button></div>`;
+  if(prevScroll) f.querySelector('.fscroll').scrollTop=prevScroll;
+  f.classList.add('open');
+}
+/* ---------- A/B test for Breakdown 2: inconvenient collection ----------
+   A = control: map pins show only the item type; distance and walking time appear on the item card after tapping a pin
+   B = only change: every pin also shows its distance and walking time (e.g. "650 m · 8 min") on the map
+   Everything else (address hidden until claimed, item cards, filters, games, claim flow) is identical. */
+const VARIANTS = {
+  A:['Plain pins','Pins show only the item type. Distance and walking time appear on the item card after tapping a pin. This is the control.'],
+  B:['Pins show distance & time','Only change: every pin on the map shows its distance and walking time (e.g. 650 m · 8 min) under it. Everything else matches A.']
+};
+const QS = (()=>{ try{ return new URLSearchParams(location.search); }catch(e){ return new Map(); } })();
+let VARIANT = (()=>{ const v=String(QS.get('v')||'').toUpperCase(); return VARIANTS[v]?v:'A'; })();
+function showWalkTag(it){ return VARIANT==='B' && !it.mine && !S.claim; }
+// Version B label: same numbers as the item card. Far items (Proximity Boost) use bus/MRT time, like their card.
+function pinTag(it){
+  if(it.km) return {html:`${it.km.toFixed(1)} km · ${transitMin(it.km)} min`, aria:`about ${it.km.toFixed(1)} km, about ${transitMin(it.km)} min by bus or MRT`};
+  const m=routeM(it); return {html:`${ic('walk',11,2.6)}${fmtDist(approxM(m))} · ${walkMin(m)} min`, aria:`about ${fmtDist(approxM(m))}, ${walkMin(m)} min walk`};
+}
+const wantsLock = it => !!it && !it.mine && it.status!=='reserved';
+function addrLine(it){ if(it.mine) return it.addr+', '+fmtDist(dist(it)); return approxText(it); }
+const lockRow = () => `<button class="lockrow" data-act="lockInfo">${ic('lock',16)}<span>Exact address and pickup note are shown after you claim</span>${ic('right',16)}</button>`;
+function earlyBanner(it){ return isEarly(it) ? `<div class="ebanner">${ic('bird',18)}<span>Early Bird access. Everyone else sees this in <b data-until="${it.release}">${fmtT(it.release-Date.now())}</b></span></div>` : ''; }
+function readForm(){ document.querySelectorAll('#form [data-k]').forEach(el=>{ S.draft[el.dataset.k]=el.value; }); }
+
+/* ---------- sliders ---------- */
+function initSliders(root){
+  root.querySelectorAll('.slider').forEach(sl=>{
+    const k=sl.querySelector('.knob'), fill=sl.querySelector('.fill'); let drag=false, sx=0, max=0, x=0;
+    const set=v=>{ x=Math.max(0,Math.min(max,v)); k.style.transform=`translateX(${x}px)`; fill.style.width=(x+52)+'px'; };
+    const finish=()=>{ sl.classList.add('done'); set(max); setTimeout(()=>ACT_DONE[sl.dataset.done](),180); };
+    k.addEventListener('pointerdown',e=>{ if(sl.classList.contains('off')) return; drag=true; sx=e.clientX; max=sl.clientWidth-k.offsetWidth-8; sl.classList.remove('back'); k.setPointerCapture(e.pointerId); });
+    k.addEventListener('pointermove',e=>{ if(!drag) return; set((e.clientX-sx)/scale); });
+    const up=()=>{ if(!drag) return; drag=false; if(x>=max*.85) finish(); else { sl.classList.add('back'); set(0); } };
+    k.addEventListener('pointerup',up); k.addEventListener('pointercancel',up);
+    k.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!sl.classList.contains('off')){ e.preventDefault(); max=sl.clientWidth-k.offsetWidth-8; finish(); } });
+  });
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg, action){
+  const t=$('#toast'); t.innerHTML=`<div>${msg}${action?`<button data-act="toastAct">${action.label}</button>`:''}</div>`;
+  const el=t.firstChild; requestAnimationFrame(()=>el.classList.add('on')); toast.act=action&&action.fn;
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'), action?5200:2800);
+}
+
+/* ---------- actions ---------- */
+function render(){
+  renderMap(); renderTop(); renderSheet(); renderDetail(); renderNav(); renderDone(); renderFilter(); renderFar(); renderModal(); renderLegend(); renderHub(); renderGame(); renderSide();
+  $('#cam').classList.toggle('open',S.camera); $('#form').classList.toggle('open',S.form);
+  $('#status').classList.toggle('light', S.camera||S.game); $('#homebar').classList.toggle('light', S.camera||S.game);
+}
+function openItem(id){
+  const it=item(id); if(!it) return;
+  if(S.claim && S.claim!==id){ toast('Finish or cancel your current pickup first.'); return; }
+  if(S.claim===id){ return; }
+  S.sel=id; S.detail=false; S.filterOpen=false; S.farOpen=false; S.collected=null;
+  if(it.x!==undefined) focusAt(it.x,it.y,195,270,true); render();
+}
+function closeSel(){ S.sel=null; S.detail=false; render(); }
+function claim(id){
+  const it=item(id); if(!it) return;
+  if(S.claim){ toast('You already have a pickup in progress.'); return; }
+  it.status='reserved'; it.by='you'; it.holdExp=Date.now()+(it.km?90:30)*MIN; S.claim=id; S.sel=null; S.detail=false; S.modal=null; S.collected=null; S.farOpen=false;
+  if(!it.km) focusAt((S.user.x+it.x)/2,(S.user.y+it.y)/2,195,300,true);
+  S.justClaimed=true; clearTimeout(claim.t); claim.t=setTimeout(()=>{ S.justClaimed=false; },2500);
+  startWalk(); render();
+  toast('Claimed! The exact address and pickup note are now shown below.');
+}
+function collect(){
+  const it=item(S.claim); if(!it) return;
+  stopWalk(); if(!it.km){ const r=nearestRoad({x:it.x,y:it.y}); S.user={x:r.pt.x,y:r.pt.y}; } S.collected=it.title;
+  S.items=S.items.filter(i=>i.id!==it.id); S.claim=null; S.sel=null;
+  focusAt(S.user.x,S.user.y,195,330,true); render();
+}
+function doCancel(){
+  const it=item(S.claim); if(!it) return;
+  stopWalk(); const custom=S.cancelReason==='Others', reason=custom?S.cancelText.trim():S.cancelReason, ts=Date.now();
+  it.cancelled.push({reason,custom,ts,you:true}); it.status='available'; it.by=null;
+  const cache=loadCache(); cache.push({id:it.id,reason,custom,ts}); saveCache(cache);
+  S.claim=null; S.modal=null; S.cancelReason=null; S.cancelText=''; S.sel=null;
+  focusAt(S.user.x,S.user.y,195,340,true); render();
+  toast('Pickup cancelled. The item goes to the next person in line.');
+}
+const ACT_DONE={collect, doCancel};
+
+function openCamera(){ if(!S.draft){ S.draft=newDraft(); S.camSub=S.camSub||0; } S.camera=true; S.form=false; S.filterOpen=false; S.rec=null; renderCamera(); render(); }
+function captureDone(){ S.camera=false; S.rec=null; S.errs=null; S.form=true; renderForm(); render(); }
+function shutter(){
+  if(S.mode==='photo'){
+    const sub=ART_ORDER[S.camSub%ART_ORDER.length];
+    S.draft.media.push({type:'photo',art:sub,flip:S.draft.media.length%2===1});
+    const fl=$('#flash'); fl.classList.add('go');
+    setTimeout(captureDone,260);
+  } else if(!S.rec){
+    S.rec={t0:Date.now()}; renderCamera();
+    S.rec.iv=setInterval(()=>{ const s=Math.floor((Date.now()-S.rec.t0)/1000); const e=$('#rect'); if(e) e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },250);
+  } else {
+    clearInterval(S.rec.iv);
+    const sub=ART_ORDER[S.camSub%ART_ORDER.length];
+    S.draft.media.push({type:'video',art:sub,flip:S.draft.media.length%2===1}); captureDone();
+  }
+}
+function publish(){
+  readForm(); const d=S.draft; const e={};
+  if(!d.media.length) e.media=1;
+  if(!d.title.trim()) e.title=1;
+  if(!d.cat) e.cat=1;
+  if(!d.a1.trim()) e.a1=1;
+  if(!/^S?\d{6}$/i.test(d.postal.trim())) e.postal=1;
+  if(!d.instr.trim()) e.instr=1;
+  if(Object.keys(e).length){
+    S.errs=e; renderForm(); const first=document.querySelector('#form .err, #mediaErr[style*="block"]'); if(first) first.scrollIntoView({block:'center',behavior:'smooth'}); toast('Fill in the highlighted fields to list your item.'); return; }
+  S.errs=null;
+  if(!S.durSet){ S.modal='duration'; S.durFrom='list'; renderModal(); return; }
+  doPublish();
+}
+function doPublish(){
+  const d=S.draft; const k=S.uid; S.uid++;
+  const id='mine'+S.uid; const first=d.media.find(m=>m.art);
+  const used=new Set(); S.items.forEach(o=>{ const bi=buildingAt(o); if(bi>=0) used.add(bi); });
+  const spot=snapToBuilding({x:S.user.x-58-(k%3)*26,y:S.user.y+10-(k%2)*34},used);
+  const it={id,title:esc(d.title.trim()),cat:d.cat,art:first?first.art:'table',addr:esc([d.a1.trim(),d.a2.trim()].filter(Boolean).join(', ')+(d.unit?' '+d.unit.trim():'')),instr:esc(d.instr.trim()),desc:esc(d.desc.trim()||'No description added.'),
+    x:spot.x, y:spot.y, exp:Date.now()+S.dur.h*HR+S.dur.m*MIN, listed:Date.now(), status:'available', by:null, queue:[], cancelled:[], mine:true, media:d.media.slice()};
+  S.items.push(it); S.camSub=(S.camSub||0)+1; S.draft=null; S.form=false; S.camera=false; S.modal=null; S.durSet=false; S.durPreset=null; S.dur={h:4,m:30}; S.justPublished=id;
+  S.filters={cat:'All',prox:null,time:null};
+  focusAt(it.x,it.y,195,430,true); render();
+  toast('Your item is live on the map.');
+  setTimeout(()=>{ if(S.justPublished===id){ S.justPublished=null; renderMap(); } },5000);
+}
+
+const ACT = {
+  pin:(d,e)=>{ if(dragMoved) return; openItem(d.id); },
+  closeSel, expand:()=>{ const it=item(S.sel); if(wantsLock(it)){ S.modal='addrLock'; S.lockFrom='full'; renderModal(); renderSide(); return; } S.detail=true; render(); },
+  lockInfo:()=>{ S.modal='addrLock'; S.lockFrom=S.detail?'detail':'lock'; renderModal(); renderSide(); },
+  lockFull:()=>{ S.modal=null; S.detail=true; render(); },
+  lockClaim:()=>{ if(S.sel) claim(S.sel); },
+  far:()=>{ S.farOpen=true; S.sel=null; S.detail=false; S.filterOpen=false; render(); },
+  farX:()=>{ S.farOpen=false; render(); },
+  hub:()=>{ S.hub=true; S.filterOpen=false; S.farOpen=false; S.sel=null; S.detail=false; render(); },
+  hubX:()=>{ S.hub=false; render(); },
+  play:()=>{ S.filterOpen=false; S.farOpen=false; S.sel=null; S.detail=false;
+    if((WS.st&&!WS.st.over) || Rw.canPlay()){ S.game=true; S.gConfirm=false; render(); }
+    else { S.modal='played'; render(); } },
+  puAct:d=>{ if(S.puBusy) return; const k=d.k; if(Rw.balance()<RCFG.COST){ const r=Rw.activate(k); toast(r.msg); return; }
+    S.puBusy=k; renderHub(); setTimeout(()=>{ const r=Rw.activate(k); S.puBusy=null; toast(r.ok&&k==='boost' ? r.msg+' Purple pins on the map are further away.' : r.msg); render(); if(r.ok){ const tb=$('#tokBtn'); tb.classList.remove('bump'); void tb.offsetWidth; tb.classList.add('bump'); } },500); },
+  gOpen:()=>{ S.game=true; S.hub=false; S.gConfirm=false; render(); },
+  gStart:()=>WS.begin(),
+  gTube:d=>WS.tap(+d.i),
+  gRestart:()=>WS.restart(), gSkip:()=>WS.skip(),
+  gEnd:()=>{ S.gConfirm=true; renderGame(); }, gEndNo:()=>{ S.gConfirm=false; renderGame(); }, gEndYes:()=>WS.finish(false),
+  gClose:()=>{ if(WS.st&&WS.st.over) WS.st=null; S.game=false; S.hub=false; render(); },
+  closeDetail:()=>{ S.detail=false; render(); },
+  claim:d=>claim(d.id),
+  remove:d=>{ S.items=S.items.filter(i=>i.id!==d.id); S.sel=null; S.detail=false; render(); toast('Your listing was removed.'); },
+  recenter:()=>{ focusAt(S.user.x,S.user.y, 195, S.claim?300:(S.sel?270:340)); },
+  filter:()=>{ S.filterOpen=!S.filterOpen; S.sel=null; S.detail=false; render(); },
+  fcat:d=>{ S.filters.cat=d.v; applyFilter(); },
+  fprox:d=>{ S.filters.prox = S.filters.prox===+d.v ? null : +d.v; applyFilter(); },
+  ftime:d=>{ S.filters.time = S.filters.time===d.v ? null : d.v; applyFilter(); },
+  fclear:()=>{ S.filters={cat:'All',prox:null,time:null}; applyFilter(); },
+  clearOne:d=>{ S.filters[d.k]= d.k==='cat'?'All':null; applyFilter(true); },
+  camera:()=>{ openCamera(); },
+  camBack:()=>{ if(S.rec){ clearInterval(S.rec.iv); S.rec=null; } S.camera=false; if(S.draft&&S.draft.media.length){ S.form=true; renderForm(); } else { S.draft=null; } render(); },
+  focusTap:(d,e)=>{ const w=$('#vfwrap'), f=$('#fsq'); if(!w||!f||!e) return; const r=w.getBoundingClientRect(); f.style.left=((e.clientX-r.left)/scale)+'px'; f.style.top=((e.clientY-r.top)/scale)+'px'; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); },
+  camInfo:()=>toast('Tip: use good light and show any damage, so claimers know what to expect.'),
+  torch:()=>{ S.torch=!S.torch; renderCamera(); toast(S.torch?'Flashlight on':'Flashlight off'); },
+  zoom:d=>{ S.zoom=+d.v; renderCamera(); },
+  mode:d=>{ if(S.rec) return; S.mode=d.v; renderCamera(); },
+  flip:()=>toast('Switched camera'),
+  gallery:()=>$('#gal').click(),
+  shutter,
+  formBack:()=>{ readForm(); S.form=false; if(S.draft && !S.draft.media.length && !S.draft.title){ S.draft=null; render(); } else { openCamera(); } },
+  addMore:()=>{ readForm(); S.form=false; openCamera(); },
+  rmMedia:d=>{ readForm(); S.draft.media.splice(+d.i,1); renderForm(); },
+  list:publish,
+  timer:()=>{ readForm(); S.modal='duration'; S.durFrom='timer'; renderModal(); },
+  hUp:()=>{ S.dur.h=Math.min(MAX_DUR_H,S.dur.h+1); durFix(); }, hDn:()=>{ S.dur.h=Math.max(0,S.dur.h-1); durFix(); },
+  mUp:()=>{ const a=[0,15,30,45]; S.dur.m=a[(a.indexOf(S.dur.m)+1)%4]; durFix(); }, mDn:()=>{ const a=[0,15,30,45]; S.dur.m=a[(a.indexOf(S.dur.m)+3)%4]; durFix(); },
+  durOK:()=>{ S.durSet=true; const from=S.durFrom; if(from==='timer') S.durPreset='custom'; S.modal=null; renderModal(); renderForm(); if(from==='list') doPublish(); },
+  modalX:()=>{ S.modal=null; S.cancelReason=null; S.cancelText=''; renderModal(); renderSide(); },
+  queue:()=>{ S.modal='queue'; renderModal(); },
+  reasons:()=>{ S.modal='reasons'; renderModal(); },
+  joinQ:()=>{ const it=item(S.sel); if(it&&!it.queue.includes('you')) it.queue.push('you'); S.modal=null; render(); toast("You're #"+(it.queue.indexOf('you')+1)+" in the queue. We'll tell you if it frees up."); },
+  leaveQ:()=>{ const it=item(S.sel); it.queue=it.queue.filter(q=>q!=='you'); S.modal=null; render(); toast('You left the queue.'); },
+  cancelPick:()=>{ S.modal='cancel'; S.cancelReason=null; S.cancelText=''; renderModal(); },
+  reason:d=>{ S.cancelReason=d.v; renderModal(); if(d.v==='Others'){ const t=$('#cancelText'); if(t) t.focus(); } },
+  doneOK:()=>{ S.collected=null; focusAt(S.user.x,S.user.y,195,340,true); render(); },
+  toastAct:()=>{ if(toast.act) toast.act(); }
+};
+const MAX_DUR_H = 24;   // listings can stay up for at most 24 hours
+function durFix(){ if(S.dur.h>=MAX_DUR_H){ S.dur.h=MAX_DUR_H; S.dur.m=0; } if(S.dur.h===0&&S.dur.m===0) S.dur.m=15; renderModal(); }
+function applyFilter(){
+  renderTop(); renderMap(); renderFilter(); renderSide();
+  if(!visibleItems().length) toast('No items match these filters.');
+}
+
+/* ---------- queue demo ---------- */
+function reserverCancels(){
+  const it=item('handbag');
+  if(!it||it.status!=='reserved'||it.by!=='other'){ toast('Nobody is holding the handbag right now.'); return; }
+  if(!it.queue.includes('you')){ toast('Join the handbag queue first: tap its grey pin, then the warning icon.'); return; }
+  it.queue=it.queue.filter(q=>q!=='you'); it.by=null; it.status='available';
+  if(S.claim){ it.status='available'; toast('The handbag is free again. You already have a pickup, so it went back on the map.'); render(); return; }
+  S.sel=null; S.detail=false; S.modal=null; claim('handbag');
+  toast("It's your turn. The handbag is now reserved for you.");
+}
+
+/* ---------- views / sidebar ---------- */
+const VIEWS = {
+  1:['Nearby items map','Your position and every free item around you. Tap a pin for details, or the camera to list your own item.','claim'],
+  2:['Item media capture','Take a photo or video of the item, or pick from your gallery, so claimers can see its condition.','give'],
+  3:['Create item listing','Add media, title, type, description, pickup address and instructions. No chat, so instructions matter.','give'],
+  4:['Listing duration','Choose how long the listing stays up, up to 24 hours. It is removed from the map when time runs out.','give'],
+  5:['Published item map','The new listing appears as a pin (yellow, with "Yours") for people nearby.','give'],
+  6:['Item details and claim','Photos, type, distance and time left. The exact address is shown after you claim. Tap Claim This to reserve the item.','claim'],
+  7:['Item collection navigation','Route to the pickup point with distance and time left. Slide to Confirm once you have the item.','claim'],
+  8:['Collection confirmation','The item is marked collected and removed so nobody travels for it.','claim'],
+  9:['Search and filter menu','Filter by item type, proximity and time (just listed, ending soon).','filter'],
+  10:['Filtered nearby map','Only matching items stay on the map. Here: Furniture, which shows the two coffee tables.','filter'],
+  11:['Item already claimed warning','A warning icon shows the item is reserved by someone else.','claim'],
+  12:['Queue pop-up','Join the queue and you are next if the claimer cancels or the reservation expires.','claim'],
+  13:['Previously cancelled warning','A red pin means the item was cancelled recently. Tap the red strip, or open full details, to see why (last 12 hours only).','claim'],
+  14:['Cancelling a claim','Choose a reason (for example No longer suitable), then slide to confirm. The item passes to the next person in line.','claim'],
+  15:['Address locked pop-up','Tapping the lock line or Full details explains that the exact address and pickup note appear after claiming.','claim'],
+  16:['Tokens and power-ups','Opened from the token count at the top. Shows the balance, the two power-ups (5 tokens each, 48 hours) and recent activity.','reward'],
+  17:['Water Sort game','Opened from the game button. 3 minutes per game, points only for solved puzzles, 1 token per 10,000 points, one game every 24 hours.','reward'],
+  18:['Further away list','Items beyond the map but inside your collection radius: 1 km, or 3 km with Proximity Boost. With Boost on, they also show on the map as purple pins.','reward']
+};
+function buildSide(){
+  ['claim','give','filter','reward'].forEach(g=>{
+    $('#v'+g).innerHTML=Object.entries(VIEWS).filter(([n,v])=>v[2]===g).map(([n,v])=>`<button class="vbtn" data-view="${n}"><span>${n}</span>${v[0]}</button>`).join('');
+  });
+  $('#vab').innerHTML=Object.entries(VARIANTS).map(([k,v])=>`<button class="vbtn" data-variant="${k}"><span>${k}</span>${v[0]}</button>`).join('');
+  $('#logo').innerHTML=ic('camera',18,2.4);
+}
+function setVariant(v){ VARIANT=v; goView(1); }
+function vNum(){
+  if(S.game) return 17;
+  if(S.hub) return 16;
+  if(S.camera) return 2;
+  if(S.form) return S.modal==='duration'?4:3;
+  if(S.modal==='queue') return 12;
+  if(S.modal==='reasons') return 13;
+  if(S.modal==='cancel') return 14;
+  if(S.modal==='addrLock') return 15;
+  if(S.modal==='played') return 17;
+  if(S.farOpen) return 18;
+  if(S.collected) return 8;
+  if(S.filterOpen) return 9;
+  const it=S.sel?item(S.sel):null;
+  if(it && S.detail) return recentCancels(it).length?13:6;
+  if(it) return (it.status==='reserved'&&!it.mine)?11:6;
+  if(S.claim) return 7;
+  if(S.justPublished) return 5;
+  if(S.filters.cat!=='All'||S.filters.prox||S.filters.time) return 10;
+  return 1;
+}
+function renderSide(){
+  const n=vNum(); document.querySelectorAll('.vbtn[data-view]').forEach(b=>b.classList.toggle('on',+b.dataset.view===n));
+  document.querySelectorAll('.vbtn[data-variant]').forEach(b=>b.classList.toggle('on',b.dataset.variant===VARIANT));
+  $('#abnote').innerHTML=`<b>Version ${VARIANT}:</b> ${VARIANTS[VARIANT][1]}`;
+  $('#nowT').textContent=`View ${n}: ${VIEWS[n][0]}${[2,3,4,16,17].includes(n)?'':' (version '+VARIANT+')'}`; $('#nowD').textContent=VIEWS[n][1];
+}
+function fillDraft(){
+  if(!S.form){ if(!S.draft) S.draft=newDraft(); if(!S.draft.media.length) S.draft.media.push({type:'photo',art:'table'},{type:'photo',art:'table',flip:true}); S.camera=false; S.form=true; }
+  Object.assign(S.draft,{title:'Coffee Table',cat:'Furniture',desc:'Nice looking table, a few light scuffs.',a1:'123456 IDP Road',a2:'',unit:'#67-67',postal:'123456',instr:'Placed outside my door!'});
+  S.errs=null; renderForm(); render();
+}
+function reset(){ stopWalk(); clearInterval(S.rec&&S.rec.iv); initState(); $('#world').dataset.built=''; $('#world').innerHTML=''; render(); setWorld(false); }
+function goView(n){
+  reset(); clearTimeout(toastT); $('#toast').innerHTML='';
+  switch(+n){
+    case 2: openCamera(); break;
+    case 3: S.draft=newDraft(); S.draft.media.push({type:'photo',art:'table'}); S.form=true; renderForm(); break;
+    case 4: S.draft=newDraft(); S.draft.media.push({type:'photo',art:'table'},{type:'photo',art:'table',flip:true},{type:'video',art:'table'}); S.form=true; fillDraft(); S.modal='duration'; S.durFrom='timer'; break;
+    case 5: { S.draft=newDraft(); S.draft.media.push({type:'photo',art:'table'}); Object.assign(S.draft,{title:'Study Chair',cat:'Furniture',desc:'Comfortable desk chair.',a1:'123456 IDP Road',unit:'#67-67',postal:'123456',instr:'Placed outside my door!'}); S.durSet=true; doPublish(); break; }
+    case 6: openItem('tableL'); break;
+    case 7: claim('tableL'); break;
+    case 8: claim('tableL'); collect(); break;
+    case 9: S.filterOpen=true; break;
+    case 10: S.filters={cat:'Furniture',prox:null,time:null}; focusAt(770,960,195,430,false); break;
+    case 11: openItem('handbag'); break;
+    case 12: openItem('handbag'); S.modal='queue'; break;
+    case 13: openItem('backpack'); S.detail=true; break;
+    case 14: claim('tableL'); S.modal='cancel'; break;
+    case 15: openItem('tableS'); S.modal='addrLock'; S.lockFrom='lock'; break;
+    case 16: S.hub=true; break;
+    case 17: ACT.play(); break;
+    case 18: S.farOpen=true; break;
+  }
+  render(); clearTimeout(toastT); $('#toast').innerHTML='';
+}
+
+/* ---------- map panning ---------- */
+let dragMoved=false;
+(function(){
+  const vp=$('#mapvp'); let down=false, sx=0, sy=0, ox=0, oy=0;
+  vp.addEventListener('pointerdown',e=>{ if(e.target.closest('.pin')){ dragMoved=false; /* still allow drag from pin */ }
+    down=true; dragMoved=false; sx=e.clientX; sy=e.clientY; ox=S.pan.x; oy=S.pan.y; });
+  window.addEventListener('pointermove',e=>{ if(!down) return; const dx=(e.clientX-sx)/scale, dy=(e.clientY-sy)/scale;
+    if(!dragMoved && Math.hypot(dx,dy)<5) return; dragMoved=true; vp.classList.add('drag');
+    S.pan=clampPan({x:ox+dx,y:oy+dy}); setWorld(false); });
+  window.addEventListener('pointerup',()=>{ if(!down) return; down=false; vp.classList.remove('drag'); setTimeout(()=>dragMoved=false,0); });
+})();
+
+/* ---------- sheet drag-to-expand ---------- */
+(function(){
+  let sy=null;
+  document.addEventListener('pointerdown',e=>{ const g=e.target.closest('.grab'); if(g) sy=e.clientY; });
+  window.addEventListener('pointerup',e=>{ if(sy===null) return; const dy=(e.clientY-sy)/scale; sy=null;
+    if(dy<-30){ ACT.expand(); } else if(dy>40){ closeSel(); } else if(Math.abs(dy)<6){ ACT.expand(); } });
+})();
+
+/* ---------- events ---------- */
+$('#screen').addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  if(a.classList.contains('grab')) return;   // handled by drag logic
+  const fn=ACT[a.dataset.act]; if(fn) fn(a.dataset,e);
+});
+document.addEventListener('click',e=>{
+  const v=e.target.closest('[data-view]'); if(v){ goView(v.dataset.view); return; }
+  const ab=e.target.closest('[data-variant]'); if(ab){ setVariant(ab.dataset.variant); return; }
+  const t=e.target.closest('[data-tool]'); if(t){ const k=t.dataset.tool; if(k==='reset'){ saveCache([]); reset(); } if(k==='multi'){ reset(); openItem('backpack'); } if(k==='free') reserverCancels(); if(k==='fill') fillDraft();
+    if(k==='tok10'){ Rw.demoAdd(10); render(); toast('Added 10 tokens.'); }
+    if(k==='skipcd'){ Rw.demoSkipWait(); render(); toast('The 24-hour wait is skipped. Water Sort is ready.'); }
+    if(k==='pusoon'){ const n=Rw.demoExpireSoon(); render(); toast(n?'Active power-ups now end in 1 minute.':'No power-ups are on. Switch one on first.'); }
+    if(k==='earlynew'){ const t=Date.now(), P=(dx,dy)=>({x:HOME.x+dx/SC, y:HOME.y+dy/SC}); const used=new Set(); S.items.forEach(o=>{ if(!o.km){ const bi=buildingAt(o); if(bi>=0) used.add(bi); } });
+      const q=snapToBuilding(P(300+Math.random()*120,180),used); S.uid++;
+      S.items.push({id:'sched'+S.uid, title:'Desk Organiser', cat:'Others', art:'books', addr:'15 Orchard Close', instr:'On the shoe rack outside.', desc:'Wooden desk organiser with three slots.', x:q.x, y:q.y, release:t+8*MIN, listed:t+8*MIN, exp:t+8*MIN+4*HR, status:'available', by:null, queue:[], cancelled:[]});
+      render(); toast(Rw.active('early')?'A new listing goes public in 8 minutes. With Early Bird you can already see it.':'A new listing goes public in 8 minutes. Switch on Early Bird to see it now.'); }
+    if(k==='rwreset'){ clearInterval(WS.timer); WS.st=null; Rw.demoReset(); S.game=false; render(); toast('Tokens, power-ups and game history are reset.'); } }
+});
+$('#screen').addEventListener('scroll',()=>{ const sc=$('#screen'); sc.scrollTop=0; sc.scrollLeft=0; });
+$('#screen').addEventListener('input',e=>{
+  if(e.target.id==='cancelText'){ S.cancelText=e.target.value; $('#cancelSlider').classList.toggle('off',!cancelReady()); return; }
+  const k=e.target.dataset&&e.target.dataset.k; if(!k) return; S.draft[k]=e.target.value; if(S.errs) delete S.errs[k]; const wrap=e.target.closest('.fld'); if(wrap) wrap.classList.remove('err'); });
+$('#screen').addEventListener('change',e=>{ const k=e.target.dataset&&e.target.dataset.k; if(k==='cat'){ S.draft.cat=e.target.value; if(S.errs) delete S.errs.cat; e.target.closest('.fld').classList.remove('err'); } });
+$('#screen').addEventListener('wheel',e=>{
+  const col=e.target.closest('.pcol'); if(!col) return; e.preventDefault();
+  const up=e.deltaY<0; (col.dataset.col==='h'?(up?ACT.hUp:ACT.hDn):(up?ACT.mDn:ACT.mUp))();
+},{passive:false});
+$('#gal').addEventListener('change',e=>{
+  const files=[...e.target.files]; if(!files.length) return; if(!S.draft) S.draft=newDraft();
+  files.forEach(f=>S.draft.media.push({type:f.type.startsWith('video')?'video':'photo',url:URL.createObjectURL(f)}));
+  e.target.value=''; captureDone();
+});
+
+/* ---------- scaling & clock ---------- */
+let scale=1;
+function fit(){
+  const study=document.documentElement.classList.contains('study');
+  const wide=window.innerWidth>900; const availH=window.innerHeight-(study?16:32), availW=(wide&&!study)?window.innerWidth-340-32:window.innerWidth-16;
+  scale=Math.max(.45,Math.min(1,availH/868,availW/414)); if(!wide) scale=Math.min(1,availW/414);
+  if(study) scale=Math.max(.3,Math.min(1,availH/868,availW/414));
+  $('#phone').style.transform=`scale(${scale})`; const f=$('#fit'); f.style.width=414*scale+'px'; f.style.height=868*scale+'px';
+}
+window.addEventListener('resize',fit);
+let tickSig='', tickPrev=null, tickN=0;
+setInterval(()=>{
+  document.querySelectorAll('[data-hold]').forEach(el=>{ const it=item(el.dataset.hold); if(!it||!it.holdExp) return; const l=Math.max(0,it.holdExp-Date.now()); el.textContent=fmtT(l); el.classList.toggle('low',l<5*MIN); });
+  document.querySelectorAll('[data-timer]').forEach(el=>{ const it=item(el.dataset.timer); if(!it) return; const l=left(it); el.textContent=fmtT(l); el.classList.toggle('low',l<10*MIN); });
+  document.querySelectorAll('[data-until]').forEach(el=>{ const base=el.dataset.clock==='rw'?Rw.now():Date.now(), ms=+el.dataset.until-base; el.textContent = el.dataset.fmt==='hrs' ? fmtHrs(ms) : fmtT(ms); });
+  // power-ups end on their own; early listings appear or go public; the game wait ends
+  const st={early:Rw.active('early'), boost:Rw.active('boost'), play:Rw.canPlay()};
+  const sig=[st.early,st.boost,st.play, visibleItems().map(i=>i.id+(isEarly(i)?'e':'')).join(','), farItems().length].join('|');
+  if(sig!==tickSig){
+    if(tickPrev){
+      const endE=tickPrev.early&&!st.early, endB=tickPrev.boost&&!st.boost;
+      if(endE&&endB) toast(`Early Bird and Proximity Boost have ended. Your collection radius is back to ${RCFG.BASE_RADIUS_KM} km.`);
+      else if(endE) toast('Early Bird has ended. New listings now appear at the same time as for everyone else.');
+      else if(endB) toast(`Proximity Boost has ended. Your collection radius is back to ${RCFG.BASE_RADIUS_KM} km.`);
+      else if(!tickPrev.play&&st.play) toast('Water Sort is ready to play again.');
+    }
+    tickSig=sig; tickPrev=st; if(!S.camera&&!S.form) render();
+  }
+  if(++tickN%30===0) Rw.persistClock();
+  // expire listings
+  if(S.items.some(i=>left(i)<=0 && i.id!==S.claim)){ S.items=S.items.filter(i=>left(i)>0||i.id===S.claim); if(S.sel&&!item(S.sel)){ S.sel=null; S.detail=false; } render(); }
+},1000);
+
+/* ---------- init ---------- */
+$('#stIcons').innerHTML='<svg width="64" height="14" viewBox="0 0 64 14" fill="currentColor"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M27 4.2a9 9 0 0 1 12 0M29.6 7a5.4 5.4 0 0 1 6.8 0M33 11l.01 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="45" y="1" width="17" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/><rect x="47" y="3" width="11" height="8" rx="2"/></svg>';
+buildSide(); fit(); initState();
+const interrupted = Rw.abandonStale();
+render(); setWorld(false);
+if(interrupted) setTimeout(()=>toast('Your last Water Sort game was interrupted, so it ended with no tokens.'),700);
+</script>
+</body>
+</html>
