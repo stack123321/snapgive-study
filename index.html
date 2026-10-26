@@ -297,7 +297,7 @@ textarea.inp{height:86px;padding:10px 14px;resize:none}
 .timerbtn span{width:50px;height:50px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center}
 .timerbtn small{font-size:11px;color:var(--ink-2)}
 .fbar .nb{position:static}
-/* A/B version B: distance and walking time under each pin */
+/* A/B: distance (A) or walking time (B) under each pin */
 .pin .wt{display:inline-flex;align-items:center;gap:2px;position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);background:#fff;color:var(--ink);border:1.5px solid var(--ink);border-radius:9px;font-size:11px;font-weight:700;padding:0 6px;line-height:16px;white-space:nowrap;box-shadow:0 2px 5px rgba(20,33,61,.18)}
 .pin.sel .wt{background:var(--ink);color:#fff}
 /* A/B test note in the sidebar */
@@ -454,7 +454,7 @@ html.study .phone-area{min-height:100vh;padding:8px!important}
     <div class="grp">A/B test: Breakdown 2 (collection)</div>
     <div class="views abv" id="vab"></div>
     <p class="abnote" id="abnote"></p>
-    <p class="hint">The chosen version stays on everywhere the map appears, including after filtering. To send testers straight into one version, add ?v=A or ?v=B to the end of the page link.</p>
+    <p class="hint">Without ?a or ?b in the link, the map follows the easy scenario (both coffee tables 1-2 km away, visible only with Proximity Boost; you start with 4 tokens). With ?a or ?b (or ?v=A / ?v=B), the map uses the experiment layout from our Experiment Design (coffee tables 650 m and 1.1 km away). Version A pins show distance only; Version B pins show walking time only. To send testers straight into one version, add ?a or ?b to the end of the page link.</p>
 
     <div class="grp">Demo helpers</div>
     <div class="tools">
@@ -577,6 +577,7 @@ const CATS = ['Furniture','Appliances','Kitchen','Electronics','Books','Fashion'
 
 /* ---------- illustrated item photos ---------- */
 const ARTS = {
+  dining:'<rect x="2" y="38" width="6" height="58" rx="2" fill="#6B4423"/><rect x="2" y="68" width="20" height="5" rx="2" fill="#6B4423"/><rect x="112" y="38" width="6" height="58" rx="2" fill="#6B4423"/><rect x="98" y="68" width="20" height="5" rx="2" fill="#6B4423"/><rect x="12" y="58" width="96" height="10" rx="3" fill="#B9793D"/><rect x="12" y="54" width="96" height="8" rx="3" fill="#D99A58"/><rect x="18" y="68" width="7" height="28" fill="#8A5A2B"/><rect x="95" y="68" width="7" height="28" fill="#8A5A2B"/><rect x="52" y="42" width="16" height="12" rx="2" fill="#F3F4F6"/><path d="M60 42c-5-7-10-5-10-5s1 7 10 5zM60 42c5-7 10-5 10-5s-1 7-10 5z" fill="#34A36B"/>',
   table:'<ellipse cx="60" cy="96" rx="24" ry="6" fill="#0002"/><rect x="55" y="62" width="10" height="32" fill="#8A5A2B"/><ellipse cx="60" cy="94" rx="18" ry="5" fill="#8A5A2B"/><ellipse cx="60" cy="62" rx="38" ry="11" fill="#B9793D"/><ellipse cx="60" cy="59" rx="38" ry="11" fill="#D99A58"/><rect x="55" y="40" width="10" height="14" rx="2" fill="#F3F4F6"/><path d="M60 40c-6-8-12-6-12-6s2 8 12 6zM60 40c6-8 12-6 12-6s-2 8-12 6z" fill="#34A36B"/>',
   bag:'<path d="M44 56c0-26 32-26 32 0" fill="none" stroke="#7A2E25" stroke-width="5" stroke-linecap="round"/><path d="M26 56h68l8 44a4 4 0 0 1-4 5H22a4 4 0 0 1-4-5z" fill="#C0503F"/><path d="M26 56h68l2 12H24z" fill="#A83F31"/><rect x="52" y="64" width="16" height="10" rx="2" fill="#F1C86B"/>',
   cooker:'<ellipse cx="60" cy="102" rx="34" ry="5" fill="#0002"/><rect x="28" y="52" width="64" height="48" rx="12" fill="#F3F4F6" stroke="#CBD2D9" stroke-width="2"/><path d="M28 62a32 24 0 0 1 64 0z" fill="#E1E5EA" stroke="#CBD2D9" stroke-width="2"/><rect x="54" y="30" width="12" height="8" rx="3" fill="#9AA5B1"/><circle cx="60" cy="78" r="7" fill="#fff" stroke="#9AA5B1" stroke-width="2"/><rect x="44" y="90" width="32" height="4" rx="2" fill="#14B885"/>',
@@ -587,7 +588,7 @@ const ARTS = {
   coffee:'<rect x="20" y="58" width="80" height="13" rx="4" fill="#B9793D"/><rect x="20" y="55" width="80" height="10" rx="4" fill="#D99A58"/><rect x="26" y="71" width="7" height="25" rx="2" fill="#8A5A2B"/><rect x="87" y="71" width="7" height="25" rx="2" fill="#8A5A2B"/><rect x="33" y="82" width="54" height="5" rx="2" fill="#A06A35"/><rect x="32" y="46" width="24" height="9" rx="2" fill="#0EA5E9"/><rect x="36" y="38" width="22" height="8" rx="2" fill="#F59E0B"/><rect x="72" y="41" width="12" height="14" rx="3" fill="#F3F4F6"/><path d="M78 41c-4-7-9-5-9-5s1 7 9 5zM78 41c4-7 9-5 9-5s-1 7-9 5z" fill="#34A36B"/>',
   plant:'<path d="M60 70C48 56 44 40 52 28c10 8 14 24 8 42zM60 70c8-16 22-24 34-22-2 14-16 26-34 22z" fill="#34A36B"/><path d="M60 70c-12-4-24-2-30 8 10 6 24 4 30-8z" fill="#2E8B57"/><path d="M38 76h44l-6 28H44z" fill="#C2693B"/><rect x="36" y="72" width="48" height="8" rx="3" fill="#D9804F"/>'
 };
-const BG = {table:['#FBE7CC','#F5D9B3'],bag:['#F9DAD5','#F2C4BD'],cooker:['#DDE8F6','#C9DAEF'],books:['#E8DFF7','#D8CBF0'],fryer:['#D8F1E7','#C3E7D8'],monitor:['#D6ECF7','#C1E0F1'],plant:['#E2F0D4','#D1E6BD'],backpack:['#E9E4F6','#D9D1EE'],coffee:['#FBE7CC','#F5D9B3']};
+const BG = {dining:['#FBE7CC','#F5D9B3'],table:['#FBE7CC','#F5D9B3'],bag:['#F9DAD5','#F2C4BD'],cooker:['#DDE8F6','#C9DAEF'],books:['#E8DFF7','#D8CBF0'],fryer:['#D8F1E7','#C3E7D8'],monitor:['#D6ECF7','#C1E0F1'],plant:['#E2F0D4','#D1E6BD'],backpack:['#E9E4F6','#D9D1EE'],coffee:['#FBE7CC','#F5D9B3']};
 const ART_ORDER = ['table','bag','cooker','books','fryer','monitor','plant','backpack','coffee'];
 // A photo is a tiny flat scene: off-white wall, a table top, and the item sitting on it.
 // Drawn in item space (120 x 120 box) and extended well past the edges so it can fill a taller camera view.
@@ -717,7 +718,7 @@ const RCFG = {
   PU_MS:48*HR,            // each activation lasts exactly 48 hours
   EARLY_MS:10*MIN,        // Early Bird sees listings this long before release
   BASE_RADIUS_KM:1,       // normal collection radius
-  BOOST_EXTRA_KM:2,       // Proximity Boost adds this much (1 km -> 3 km)
+  BOOST_EXTRA_KM:1,       // Proximity Boost adds this much (1 km -> 2 km)
   GAME_COOLDOWN:24*HR,    // one game per 24 hours, counted from when a game starts
   PTS_PER_TOKEN:10000,    // 1 token per full 10,000 points
   GAME_MS:3*MIN,          // length of one Water Sort game
@@ -744,7 +745,8 @@ const fmtClock = ts => new Date(ts).toLocaleString('en-SG',{weekday:'short',day:
 const RK='snapgive.rewards.v1';
 const Rw = (()=>{
   let mem=null;
-  const blank=()=>({v:1,balance:0,ledger:[],pu:{},game:{lastStart:0,current:null,history:[]},maxSeen:0});
+  // New users start with 4 tokens, matching the easy scenario (one short of a 5-token power-up).
+  const blank=()=>({v:1,balance:4,ledger:[{ts:Date.now(),d:4,why:'Starting balance'}],pu:{},game:{lastStart:0,current:null,history:[]},maxSeen:0});
   function load(){
     if(mem) return mem;
     let st=null; try{ st=JSON.parse(localStorage.getItem(RK)||'null'); }catch(e){}
@@ -922,8 +924,11 @@ function initState(){
   const P = (dx,dy) => ({x:HOME.x+dx/SC, y:HOME.y+dy/SC});
   S = {
     items:[
-      {id:'tableL', title:'Coffee Table', cat:'Furniture', art:'coffee', addr:'56 Kent Lane, #03-18', instr:'Table is 1.2 m wide, please bring someone to help carry.', desc:'Wooden coffee table with a rectangular top and light wear on the legs.', ...P(-195,468), exp:t+6*HR, listed:t-25*MIN, status:'available', by:null, queue:[], cancelled:[]},
-      {id:'tableS', title:'Coffee Table', cat:'Furniture', art:'table', addr:'12 Library Walk, #08-12', instr:'Left outside #08-12, beside the shoe rack.', desc:'Small round coffee table, a few light scuffs.', ...P(-185,858), exp:t+4*HR+29*MIN+57e3, listed:t-40*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      // Easy scenario: both coffee tables are 1-2 km away, so they only appear with Proximity Boost.
+      // Experiment links (?v=A or ?v=B) keep them nearby, as in our Experiment Design (650 m and 1.1 km).
+      {id:'tableL', title:'Coffee Table', cat:'Furniture', art:'coffee', addr:'56 Kent Lane, #03-18', instr:'Table is 1.2 m wide, please bring someone to help carry.', desc:'Wooden coffee table with a rectangular top and light wear on the legs.', ...(EXP?P(-195,468):P(-1000,860)), exp:t+6*HR, listed:t-25*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      {id:'tableS', title:'Coffee Table', cat:'Furniture', art:'table', addr:'12 Library Walk, #08-12', instr:'Left outside #08-12, beside the shoe rack.', desc:'Small round coffee table, a few light scuffs.', ...(EXP?P(-185,858):P(1600,40)), exp:t+4*HR+29*MIN+57e3, listed:t-40*MIN, status:'available', by:null, queue:[], cancelled:[]},
+      ...(EXP?[]:[{id:'tableD', title:'Dining Table (seats 6)', cat:'Furniture', art:'dining', addr:'3 Kent Lane, #06-04', instr:'In the void deck. Please bring two people, it is heavy.', desc:'Solid wood dining table, 1.8 m long. Too big for most bedrooms.', ...P(-195,468), exp:t+5*HR, listed:t-50*MIN, status:'available', by:null, queue:[], cancelled:[]}]),
       {id:'handbag', title:'Handbag', cat:'Fashion', art:'bag', addr:'88 IDP Road', instr:'Hanging on the gate, left side.', desc:'Used handbag with a magnetic clasp.', ...P(-120,-110), exp:t+2*HR+10*MIN, listed:t-90*MIN, status:'reserved', by:'other', queue:[], cancelled:[]},
       {id:'rice', title:'Rice Cooker', cat:'Appliances', art:'cooker', addr:'12 Kent Lane', instr:'With the guard at the lobby counter.', desc:'1.8L rice cooker. Works fine, inner pot has light wear.', ...P(170,-160), exp:t+3*HR, listed:t-10*MIN, status:'available', by:null, queue:[], cancelled:[]},
       {id:'backpack', title:'Backpack', cat:'Fashion', art:'backpack', addr:'41 Library Walk', instr:'On the bench outside the lift lobby.', desc:'Blue backpack with a laptop sleeve and two front pockets.', ...P(90,140), exp:t+5*HR, listed:t-4*HR, status:'available', by:null, queue:[], cancelled:[{reason:'Product does not match listing',ts:t-35*MIN},{reason:'Product does not match listing',ts:t-100*MIN}]},
@@ -991,13 +996,17 @@ function matchesFilters(it){
     && (!f.prox || dist(it)<=f.prox)
     && (!f.time || (f.time==='just' ? now-it.listed<30*MIN : left(it)<HR));
 }
+// Map items beyond the normal radius only appear with Proximity Boost (as purple pins). Radius is measured in a straight line.
+const kmOf = it => it.km || dist(it)/1000;
+const beyond = it => !it.mine && !it.km && kmOf(it) > RCFG.BASE_RADIUS_KM;
+const isFar = it => !!it.km || beyond(it);
 function visibleItems(){
-  return S.items.filter(it => !it.km && left(it)>0 && released(it) && matchesFilters(it));
+  return S.items.filter(it => !it.km && left(it)>0 && released(it) && matchesFilters(it) && (!beyond(it) || it.id===S.claim));
 }
 // Items beyond this map that sit inside the user's collection radius (1 km, or more with Proximity Boost).
 function farItems(){
-  return S.items.filter(it => it.km && left(it)>0 && released(it) && it.km<=Rw.radiusKm() && it.id!==S.claim && matchesFilters(it))
-    .sort((a,b)=>a.km-b.km);
+  return S.items.filter(it => isFar(it) && left(it)>0 && released(it) && kmOf(it)<=Rw.radiusKm() && it.id!==S.claim && matchesFilters(it))
+    .sort((a,b)=>kmOf(a)-kmOf(b));
 }
 
 /* ---------- map drawing ---------- */
@@ -1039,12 +1048,12 @@ function renderMap(){
   const vis=visibleItems().concat(boostPins);
   let h='';
   vis.forEach(it=>{
-    const nc = recentCancels(it).length; const st = it.km ? 'far' : it.mine ? 'mine' : (it.status==='reserved' ? 'reserved' : (cancelSev(it)==='red' ? 'flag' : 'open'));
+    const nc = recentCancels(it).length; const st = it.mine ? 'mine' : it.status==='reserved' ? 'reserved' : cancelSev(it)==='red' ? 'flag' : isFar(it) ? 'far' : 'open';   // a recent cancellation shows red even for further-away items
     const inQ = it.queue.includes('you') ? it.queue.indexOf('you')+1 : 0;
     const cls = ['pin', S.sel===it.id?'sel':'', S.claim===it.id?'sel':'', S.justPublished===it.id?'pulse':''].join(' ');
     const early=isEarly(it);
     const tag = showWalkTag(it) ? pinTag(it) : null;
-    h+=`<button class="${cls}" style="left:${it.x}px;top:${it.y}px" data-act="pin" data-id="${it.id}" aria-label="${it.title.replace(/"/g,'&quot;')}, ${tag?tag.aria:fmtDist(dist(it))+' away'}${early?', early access':''}${it.status==='reserved'?', reserved':''}${nc?', '+nc+' recent cancellation'+(nc>1?'s':''):''}">${pinSVG(it.cat,st)}${it.mine?'<span class="tag">Yours</span>':''}${early?'<span class="eb">Early</span>':''}${tag?`<span class="wt" aria-hidden="true">${tag.html}</span>`:(it.km?`<span class="ft">${it.km.toFixed(1)} km</span>`:'')}${inQ?`<span class="qb">#${inQ}</span>`:''}${st==='flag'?`<span class="cb">${nc}</span>`:''}</button>`;
+    h+=`<button class="${cls}" style="left:${it.x}px;top:${it.y}px" data-act="pin" data-id="${it.id}" aria-label="${it.title.replace(/"/g,'&quot;')}, ${tag?tag.aria:fmtDist(dist(it))+' away'}${early?', early access':''}${it.status==='reserved'?', reserved':''}${nc?', '+nc+' recent cancellation'+(nc>1?'s':''):''}">${pinSVG(it.cat,st)}${it.mine?'<span class="tag">Yours</span>':''}${early?'<span class="eb">Early</span>':''}${tag?`<span class="wt" aria-hidden="true">${tag.html}</span>`:(isFar(it)?`<span class="ft">${it.km?it.km.toFixed(1)+' km':fmtDist(approxM(routeM(it)))}</span>`:'')}${inQ?`<span class="qb">#${inQ}</span>`:''}${st==='flag'?`<span class="cb">${nc}</span>`:''}</button>`;
   });
   $('#pins').innerHTML=h;
   placeMe();
@@ -1284,11 +1293,11 @@ function renderFar(){
   const p=$('#farp');
   if(S.farOpen){
     const list=farItems(), r=Rw.radiusKm(), boost=Rw.active('boost');
-    const out=S.items.filter(it=>it.km&&left(it)>0&&released(it)&&it.km>r&&matchesFilters(it)).sort((a,b)=>a.km-b.km);
-    const row=(it,o)=>`<button class="frow ${o?'out':''}" ${o?'data-act="hub"':`data-act="pin" data-id="${it.id}"`}><div class="fth">${art(it.art,false)}</div><div><b>${it.title}</b><small>${it.km.toFixed(1)} km away · ~${transitMin(it.km)} min by bus or MRT${o?' · outside your radius':''}</small></div>${ic(o?'lock':'right',18)}</button>`;
+    const out=S.items.filter(it=>isFar(it)&&left(it)>0&&released(it)&&kmOf(it)>r&&matchesFilters(it)).sort((a,b)=>kmOf(a)-kmOf(b));
+    const row=(it,o)=>`<button class="frow ${o?'out':''}" ${o?'data-act="hub"':`data-act="pin" data-id="${it.id}"`}><div class="fth">${art(it.art,false)}</div><div><b>${it.title}</b><small>${approxText(it).replace(/^About /,'')}${o?' · outside your radius':''}</small></div>${ic(o?'lock':'right',18)}</button>`;
     p.innerHTML=`<div class="grab" aria-hidden="true"></div><button class="xbtn" data-act="farX" aria-label="Close">${ic('x',18)}</button>
       <h2 class="ttl" style="font-size:23px">Further away</h2>
-      <p class="hnote" style="margin-top:4px">Items beyond this map but inside your <b>${r} km</b> collection radius.${boost?' Proximity Boost is on.':` Proximity Boost extends it to ${RCFG.BASE_RADIUS_KM+RCFG.BOOST_EXTRA_KM} km.`}</p>
+      <p class="hnote" style="margin-top:4px">Items beyond your usual 1 km area but inside your <b>${r} km</b> collection radius.${boost?' Proximity Boost is on.':` Proximity Boost extends it to ${RCFG.BASE_RADIUS_KM+RCFG.BOOST_EXTRA_KM} km.`}</p>
       <div class="flist">${list.map(it=>row(it,false)).join('')||'<p class="hnote">Nothing further away right now.</p>'}${out.map(it=>row(it,true)).join('')}</div>`;
   }
   p.classList.toggle('open', !!S.farOpen && !S.camera && !S.form);
@@ -1391,20 +1400,33 @@ function renderForm(){
   f.classList.add('open');
 }
 /* ---------- A/B test for Breakdown 2: inconvenient collection ----------
-   A = control: map pins show only the item type; distance and walking time appear on the item card after tapping a pin
-   B = only change: every pin also shows its distance and walking time (e.g. "650 m · 8 min") on the map
-   Everything else (address hidden until claimed, item cards, filters, games, claim flow) is identical. */
+   A = every pin shows only its distance (e.g. "650 m")
+   B = every pin shows only its walking time (e.g. "8 min")
+   Everything else (item cards, address hidden until claimed, filters, games, claim flow) is identical.
+   Links: ?a or ?v=A for Version A, ?b or ?v=B for Version B. */
 const VARIANTS = {
-  A:['Plain pins','Pins show only the item type. Distance and walking time appear on the item card after tapping a pin. This is the control.'],
-  B:['Pins show distance & time','Only change: every pin on the map shows its distance and walking time (e.g. 650 m · 8 min) under it. Everything else matches A.']
+  A:['Pins show distance','Every pin on the map shows only its distance (e.g. 650 m) under it. Everything else matches B.'],
+  B:['Pins show walking time','Every pin on the map shows only its walking time (e.g. 8 min) under it. Everything else matches A.']
 };
 const QS = (()=>{ try{ return new URLSearchParams(location.search); }catch(e){ return new Map(); } })();
-let VARIANT = (()=>{ const v=String(QS.get('v')||'').toUpperCase(); return VARIANTS[v]?v:'A'; })();
-function showWalkTag(it){ return VARIANT==='B' && !it.mine && !S.claim; }
-// Version B label: same numbers as the item card. Far items (Proximity Boost) use bus/MRT time, like their card.
+// FORCED locks this file to one version (null = choose with ?a / ?b / ?v=A / ?v=B).
+const FORCED = null;
+const QV = (()=>{ const v=String(QS.get('v')||'').toUpperCase(); if(VARIANTS[v]) return v; if(QS.has('a')||QS.has('A')) return 'A'; if(QS.has('b')||QS.has('B')) return 'B'; return null; })();
+// Experiment links use the experiment layout (both coffee tables within 1 km); a plain link follows the easy scenario.
+const EXP = !!(FORCED || QV);
+let VARIANT = FORCED || QV || 'A';
+// Pin labels only appear in the experiment (or after picking a version in the sidebar); the easy-scenario link keeps plain pins.
+let SHOWTAGS = EXP;
+function showWalkTag(it){ return SHOWTAGS && !it.mine && !S.claim; }
+// Pin label: same numbers as the item card. A shows distance only, B shows walking time only.
+// Far items (Proximity Boost) use bus/MRT time, like their card.
 function pinTag(it){
-  if(it.km) return {html:`${it.km.toFixed(1)} km · ${transitMin(it.km)} min`, aria:`about ${it.km.toFixed(1)} km, about ${transitMin(it.km)} min by bus or MRT`};
-  const m=routeM(it); return {html:`${ic('walk',11,2.6)}${fmtDist(approxM(m))} · ${walkMin(m)} min`, aria:`about ${fmtDist(approxM(m))}, ${walkMin(m)} min walk`};
+  if(VARIANT==='A'){
+    if(it.km) return {html:`${it.km.toFixed(1)} km`, aria:`about ${it.km.toFixed(1)} km away`};
+    const m=routeM(it); return {html:`${fmtDist(approxM(m))}`, aria:`about ${fmtDist(approxM(m))} away`};
+  }
+  if(it.km) return {html:`~${transitMin(it.km)} min`, aria:`about ${transitMin(it.km)} min by bus or MRT`};
+  const m=routeM(it); return {html:`${ic('walk',11,2.6)}${walkMin(m)} min`, aria:`${walkMin(m)} min walk`};
 }
 const wantsLock = it => !!it && !it.mine && it.status!=='reserved';
 function addrLine(it){ if(it.mine) return it.addr+', '+fmtDist(dist(it)); return approxText(it); }
@@ -1615,16 +1637,17 @@ const VIEWS = {
   15:['Address locked pop-up','Tapping the lock line or Full details explains that the exact address and pickup note appear after claiming.','claim'],
   16:['Tokens and power-ups','Opened from the token count at the top. Shows the balance, the two power-ups (5 tokens each, 48 hours) and recent activity.','reward'],
   17:['Water Sort game','Opened from the game button. 3 minutes per game, points only for solved puzzles, 1 token per 10,000 points, one game every 24 hours.','reward'],
-  18:['Further away list','Items beyond the map but inside your collection radius: 1 km, or 3 km with Proximity Boost. With Boost on, they also show on the map as purple pins.','reward']
+  18:['Further away list','Items beyond the map but inside your collection radius: 1 km, or 2 km with Proximity Boost. With Boost on, they also show on the map as purple pins.','reward']
 };
 function buildSide(){
   ['claim','give','filter','reward'].forEach(g=>{
     $('#v'+g).innerHTML=Object.entries(VIEWS).filter(([n,v])=>v[2]===g).map(([n,v])=>`<button class="vbtn" data-view="${n}"><span>${n}</span>${v[0]}</button>`).join('');
   });
+  if(FORCED){ $('#vab').style.display='none'; }
   $('#vab').innerHTML=Object.entries(VARIANTS).map(([k,v])=>`<button class="vbtn" data-variant="${k}"><span>${k}</span>${v[0]}</button>`).join('');
   $('#logo').innerHTML=ic('camera',18,2.4);
 }
-function setVariant(v){ VARIANT=v; goView(1); }
+function setVariant(v){ if(FORCED) return; VARIANT=v; SHOWTAGS=true; goView(1); }
 function vNum(){
   if(S.game) return 17;
   if(S.hub) return 16;
@@ -1719,7 +1742,7 @@ document.addEventListener('click',e=>{
       const q=snapToBuilding(P(300+Math.random()*120,180),used); S.uid++;
       S.items.push({id:'sched'+S.uid, title:'Desk Organiser', cat:'Others', art:'books', addr:'15 Orchard Close', instr:'On the shoe rack outside.', desc:'Wooden desk organiser with three slots.', x:q.x, y:q.y, release:t+8*MIN, listed:t+8*MIN, exp:t+8*MIN+4*HR, status:'available', by:null, queue:[], cancelled:[]});
       render(); toast(Rw.active('early')?'A new listing goes public in 8 minutes. With Early Bird you can already see it.':'A new listing goes public in 8 minutes. Switch on Early Bird to see it now.'); }
-    if(k==='rwreset'){ clearInterval(WS.timer); WS.st=null; Rw.demoReset(); S.game=false; render(); toast('Tokens, power-ups and game history are reset.'); } }
+    if(k==='rwreset'){ clearInterval(WS.timer); WS.st=null; Rw.demoReset(); S.game=false; render(); toast('Tokens, power-ups and game history are reset. You start with 4 tokens.'); } }
 });
 $('#screen').addEventListener('scroll',()=>{ const sc=$('#screen'); sc.scrollTop=0; sc.scrollLeft=0; });
 $('#screen').addEventListener('input',e=>{
